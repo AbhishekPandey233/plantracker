@@ -1,4 +1,10 @@
 {
+  "meta": {
+    "title": "6-month plan",
+    "start": "2026-11-18",
+    "targetEnd": "2027-05-16",
+    "targetMonths": 6
+  },
   "months": [
     {
       "id": "m1",

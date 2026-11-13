@@ -73,7 +73,7 @@ function TodayView({ days, now }) {
 
       {catchUpTasks.length > 0 && (
         <>
-          <h2 className="text-lg font-semibold text-slate-800 mt-6 mb-2">Catch up</h2>
+          <h2 id="catch-up" className="text-lg font-semibold text-slate-800 mt-6 mb-2 rounded-lg">Catch up</h2>
           <div className="bg-white rounded-xl shadow-sm p-4">
             {catchUpTasks.map((task) => (
               <TaskRow key={task.id} task={task} date={task.date} />

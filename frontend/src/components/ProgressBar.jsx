@@ -13,7 +13,7 @@ function ProgressBar({ label, done, total }) {
           when a task is ticked (scale animates smoother than width). */}
       <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
         <div
-          className="bg-teal-600 dark:bg-teal-400 h-2 rounded-full origin-left transition-transform duration-500 ease-out"
+          className="bg-teal-600 dark:bg-teal-400 h-2 rounded-full origin-left transition-transform duration-700 ease-out"
           style={{ transform: `scaleX(${pct / 100})` }}
         />
       </div>

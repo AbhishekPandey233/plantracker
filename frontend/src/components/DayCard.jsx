@@ -12,7 +12,7 @@ function dayName(date) {
 
 // One card per day: date, day name, focus, its task rows, and day-level buttons
 // (Add task, Mark day done, Untick day). Tick state comes from PlanContext.
-// "index" is the card's position, used to stagger the fade-in (each card 60ms later).
+// "index" is the card's position, used to stagger the fade-in (each card 90ms later).
 function DayCard({ day, index = 0 }) {
   const { plan, isDone, setMany, openTaskForm } = usePlanActions()
   // .every() on an empty list is true, so also require at least one task
@@ -27,7 +27,8 @@ function DayCard({ day, index = 0 }) {
 
   return (
     <div
-      style={{ animationDelay: `${index * 60}ms` }}
+      id={`day-${day.date}`} // so the calendar can scroll to this card
+      style={{ animationDelay: `${index * 90}ms` }}
       className={`animate-fade-up bg-white rounded-xl shadow-sm p-4 mb-4 transition-shadow duration-200 hover:shadow-md ${
         isToday ? 'ring-2 ring-teal-500' : ''
       }`}

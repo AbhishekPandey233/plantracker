@@ -2,6 +2,7 @@
 // Every function takes a plan and returns a NEW plan (the old one is left untouched),
 // which is how React state should be updated.
 import { addDays, allTasks, mondayOf } from './planHelpers.js'
+import { isValidDate, validatePlan } from './validatePlan.js'
 
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 
@@ -130,4 +131,74 @@ export function deleteTask(plan, id) {
   const { day, index } = findTask(next, id)
   day.tasks.splice(index, 1)
   return next
+}
+
+// --- Months and weeks (Build Plan 3, Phase 6) ---
+// These throw an Error with a message to show when a change isn't allowed.
+
+function checkPlan(next) {
+  const problems = validatePlan(next, { quiet: true })
+  if (problems.length) throw new Error(problems.join('\n'))
+  return next
+}
+
+// Changes a month's title and dates. Refused if any of its weeks (and so any of
+// its tasks and ticks) would end up outside the new dates, or if months would overlap.
+export function updateMonth(plan, id, { title, start, end }) {
+  if (!title?.trim()) throw new Error('The month needs a title.')
+  if (!isValidDate(start) || !isValidDate(end) || start > end) throw new Error('Pick a start date on or before the end date.')
+  const next = structuredClone(plan)
+  const month = next.months.find((m) => m.id === id)
+  const outside = month.weeks.filter((w) => w.start < start || w.end > end)
+  if (outside.length) {
+    throw new Error(`${outside.map((w) => `"${w.title}" (${w.start} to ${w.end})`).join(', ')} would end up outside the month. Delete or shorten it first.`)
+  }
+  Object.assign(month, { title: title.trim(), start, end })
+  next.months.sort((a, b) => (a.start < b.start ? -1 : 1))
+  return checkPlan(next)
+}
+
+// Adds an empty week after the month's last week (to that Sunday), stretching the month if needed.
+export function addWeek(plan, monthId) {
+  const next = structuredClone(plan)
+  const month = next.months.find((m) => m.id === monthId)
+  const start = month.weeks.length ? addDays(month.weeks.at(-1).end, 1) : month.start
+  const end = addDays(mondayOf(start), 6)
+  const number = allWeeks(next).filter((w) => w.start < start).length + 1
+  const week = { id: newWeekId(next, month), title: `Week ${number}: New week`, start, end, goal: '', days: [] }
+  month.weeks.push(week)
+  if (end > month.end) month.end = end
+  return { plan: checkPlan(next), week }
+}
+
+// Changes a week's title and goal (its dates and id stay).
+export function updateWeek(plan, id, { title, goal }) {
+  if (!title?.trim()) throw new Error('The week needs a title.')
+  const next = structuredClone(plan)
+  Object.assign(allWeeks(next).find((w) => w.id === id), { title: title.trim(), goal: (goal ?? '').trim() })
+  return next
+}
+
+// Deleting removes the week/month and its tasks. Their ticks stay in progress.json (harmless).
+export function deleteWeek(plan, id) {
+  const next = structuredClone(plan)
+  for (const month of next.months) month.weeks = month.weeks.filter((w) => w.id !== id)
+  return next
+}
+
+export function deleteMonth(plan, id) {
+  return { ...plan, months: plan.months.filter((m) => m.id !== id) }
+}
+
+// Task ids in a month or week, for the "this deletes N tasks" message.
+export function taskIdsIn(monthOrWeek) {
+  const weeks = monthOrWeek.weeks ?? [monthOrWeek]
+  return weeks.flatMap((w) => w.days.flatMap((d) => d.tasks.map((t) => t.id)))
+}
+
+// The delete confirmation text: how many tasks and ticks would go.
+export function deleteMessage(name, ids, isDone) {
+  const ticks = ids.filter(isDone).length
+  const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`
+  return `${name} has ${plural(ids.length, 'task')} and ${plural(ticks, 'tick')}. Deleting removes the tasks from plan.json (their ticks stay in progress.json but are no longer shown).`
 }

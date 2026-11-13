@@ -79,10 +79,33 @@ export function validatePlan(plan, { quiet = false } = {}) {
       }
     }
 
+    // Months can't overlap either, or a date would belong to two months.
+    const months = plan.months.filter((m) => isValidDate(m?.start) && isValidDate(m?.end)).sort((a, b) => (a.start < b.start ? -1 : 1))
+    for (let i = 1; i < months.length; i++) {
+      if (months[i].start <= months[i - 1].end) warnings.push(`Months "${months[i - 1].id}" and "${months[i].id}" overlap`)
+    }
+
+    if (plan.meta !== undefined) warnings.push(...validateMeta(plan.meta))
     if (plan.routine !== undefined) warnings.push(...validateRoutine(plan.routine))
   }
 
   if (!quiet) for (const w of warnings) console.warn('[plan.json]', w)
+  return warnings
+}
+
+// Checks the optional "meta" section: { title, start, targetEnd, targetMonths }.
+function validateMeta(meta) {
+  if (!meta || typeof meta !== 'object' || Array.isArray(meta)) return ['meta must be an object']
+  const warnings = []
+  for (const key of ['start', 'targetEnd']) {
+    if (meta[key] !== undefined && !isValidDate(meta[key])) warnings.push(`meta.${key}: invalid date "${meta[key]}"`)
+  }
+  if (isValidDate(meta.start) && isValidDate(meta.targetEnd) && meta.start >= meta.targetEnd) {
+    warnings.push(`meta: start ${meta.start} must be before targetEnd ${meta.targetEnd}`)
+  }
+  if (meta.targetMonths !== undefined && !(Number.isInteger(meta.targetMonths) && meta.targetMonths > 0)) {
+    warnings.push('meta.targetMonths must be a whole number above 0')
+  }
   return warnings
 }
 

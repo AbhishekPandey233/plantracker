@@ -1,14 +1,18 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { PlanContext } from '../PlanContext'
 import { useNow } from '../hooks/useNow'
 import { useProgress } from '../hooks/useProgress'
-import { addDays, flattenDays, todayString } from '../utils/planHelpers'
+import { addDays, flattenDays, newlyCompleted, planSummary, todayString } from '../utils/planHelpers'
 import { routineTickIds } from '../utils/timeHelpers'
 import { withTransition } from '../utils/transition'
+import Confetti from './Confetti'
 import DayCard from './DayCard'
 import ImportPanel from './ImportPanel'
 import Menu from './Menu'
-import TabButton from './TabButton'
+import MiniCalendar from './MiniCalendar'
+import MonthWizard from './MonthWizard'
+import MonthsView from './MonthsView'
+import Sidebar from './Sidebar'
 import TaskForm from './TaskForm'
 import Toast from './Toast'
 import TodayView from './TodayView'
@@ -18,6 +22,32 @@ import WeekSelector from './WeekSelector'
 function weekIndexFor(weeks, date) {
   const index = weeks.findIndex((week) => date >= week.start && date <= week.end)
   return index === -1 ? 0 : index
+}
+
+const VIEWS = ['today', 'weeks', 'months'] // left to right, for the slide direction
+const COLLAPSED_KEY = 'planTracker:sidebarCollapsed'
+
+// The saved panel choice wins; with nothing saved, narrow windows start collapsed.
+function loadCollapsed() {
+  try {
+    const saved = localStorage.getItem(COLLAPSED_KEY)
+    if (saved !== null) return saved === 'true'
+  } catch {
+    // storage blocked: fall back to the window width
+  }
+  return window.innerWidth < 900
+}
+
+// Scrolls an element into view and flashes an orange ring around it.
+function flash(id) {
+  const el = id && document.getElementById(id)
+  if (!el) return
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  // Web Animations API: a one-off animation straight on the element, no CSS class needed.
+  // Three orange pulses, so it's clear which card was picked.
+  const on = { boxShadow: '0 0 0 4px #f97316' }
+  const off = { boxShadow: '0 0 0 0 rgb(249 115 22 / 0)' }
+  el.animate([off, on, off, on, off, on, off], { duration: 2100, easing: 'ease-in-out' })
 }
 
 // True while the user is typing in a text field, so shortcuts don't fire.
@@ -32,10 +62,16 @@ function Tracker({ plan, savePlan }) {
   const now = useNow()
   const { isDone, toggle, setMany, resetAll, undo, toast, closeToast, saveError } = useProgress()
   // useState: values React remembers between renders.
-  const [tab, setTab] = useState('today') // 'today' or 'weeks'
+  const [tab, setTab] = useState('today') // 'today', 'weeks' or 'months'
+  const [collapsed, setCollapsed] = useState(loadCollapsed) // passing the function: it only runs on the first render
   const [weekIndex, setWeekIndex] = useState(null) // null = "the week that contains today"
   const [form, setForm] = useState(null) // the Add/Edit task form: null = closed
   const [importing, setImporting] = useState(false)
+  const [wizardOpen, setWizardOpen] = useState(false) // the New month wizard
+  const [confetti, setConfetti] = useState(null) // { id, big } while a burst is showing
+  // useRef: remembers a value without re-rendering. Here: the id of an element to
+  // scroll to once the next view has rendered.
+  const pendingScroll = useRef(null)
 
   const today = todayString(now)
   // Flatten months -> weeks into one list, so Prev/Next can just move by index.
@@ -50,10 +86,47 @@ function Tracker({ plan, savePlan }) {
   const todayTasks = days.find((d) => d.date === today)?.tasks ?? []
   const todayDone = todayTasks.filter((t) => isDone(t.id)).length
 
-  // Today is "left" of Weeks, so going to Weeks slides forward and back to Today slides back.
+  // Views sit left to right (Today, Weeks, Months): moving right slides forward, left slides back.
   function changeTab(next) {
-    if (next === tab) return // clicking the open tab shouldn't animate
-    withTransition(() => setTab(next), next === 'weeks' ? 1 : -1)
+    if (next === tab) return // clicking the open view shouldn't animate
+    withTransition(() => setTab(next), VIEWS.indexOf(next) > VIEWS.indexOf(tab) ? 1 : -1)
+  }
+
+  // Opens a view (and optionally a week), then scrolls to and flashes the element
+  // with id "anchor" (e.g. "day-2026-12-03" or "catch-up").
+  function goTo(view, { week: nextWeek = weekIndex, anchor = null } = {}) {
+    if (view === tab && nextWeek === weekIndex) return flash(anchor) // same page: just scroll
+    pendingScroll.current = anchor
+    const from = view === tab ? index : VIEWS.indexOf(tab)
+    const to = view === tab ? (nextWeek ?? currentIndex) : VIEWS.indexOf(view)
+    withTransition(() => {
+      setTab(view)
+      setWeekIndex(nextWeek)
+    }, to >= from ? 1 : -1)
+  }
+
+  // Opens the Weeks view on the week containing `date` and scrolls to that day's card.
+  function goToDate(date) {
+    const i = weeks.findIndex((w) => w.start <= date && date <= w.end)
+    if (i !== -1) goTo('weeks', { week: i, anchor: `day-${date}` })
+  }
+
+  // No dependency list: runs after every render, and scrolls if goTo left a target.
+  useEffect(() => {
+    if (!pendingScroll.current) return
+    flash(pendingScroll.current)
+    pendingScroll.current = null
+  })
+
+  function toggleSidebar() {
+    setCollapsed((prev) => {
+      try {
+        localStorage.setItem(COLLAPSED_KEY, String(!prev))
+      } catch {
+        // storage blocked: the choice just won't survive a refresh
+      }
+      return !prev
+    })
   }
 
   // Moves by `delta` weeks (-1 = previous, 1 = next).
@@ -84,14 +157,17 @@ function Tracker({ plan, savePlan }) {
     document.title = todayTasks.length ? `Plan Tracker (${todayDone}/${todayTasks.length} today)` : 'Plan Tracker'
   }, [todayDone, todayTasks.length])
 
-  // Keyboard shortcuts: ← / → week, T Today, W Weeks, N add task.
+  // Keyboard shortcuts: ← / → week, T Today, W Weeks, M Months, [ panel, N add task.
   // No dependency list: it re-subscribes after every render, so it always sees the latest state.
   useEffect(() => {
     function onKey(e) {
-      if (e.ctrlKey || e.metaKey || e.altKey || isTyping(e.target) || form || importing) return
+      // Any open dialog (task form, import, wizard, edit/delete) pauses the shortcuts.
+      if (e.ctrlKey || e.metaKey || e.altKey || isTyping(e.target) || document.querySelector('[aria-modal]')) return
       const key = e.key.toLowerCase()
       if (key === 't') changeTab('today')
       else if (key === 'w') changeTab('weeks')
+      else if (key === 'm') changeTab('months')
+      else if (key === '[') toggleSidebar()
       else if (key === 'n') {
         e.preventDefault() // don't type the "n" into the form that opens
         setForm({ mode: 'add', date: tab === 'weeks' && week && !(today >= week.start && today <= week.end) ? week.start : today })
@@ -102,36 +178,68 @@ function Tracker({ plan, savePlan }) {
     return () => window.removeEventListener('keydown', onKey)
   })
 
+  // Confetti when a tick change completes a day (small) or a whole week (big).
+  // nextIsDone says what isDone will be after the change. Undo calls undo() directly,
+  // not these, so undoing never celebrates.
+  function celebrate(nextIsDone) {
+    const ids = (list) => list.flatMap((d) => d.tasks.map((t) => t.id))
+    const big = newlyCompleted(weeks.map((w) => ids(w.days)), isDone, nextIsDone)
+    if (big || newlyCompleted(days.map((d) => ids([d])), isDone, nextIsDone)) setConfetti((prev) => ({ id: (prev?.id ?? 0) + 1, big }))
+  }
+  function toggleAndCelebrate(id) {
+    celebrate((x) => (x === id ? !isDone(id) : isDone(x)))
+    toggle(id)
+  }
+  function setManyAndCelebrate(ids, value, message) {
+    const changed = new Set(ids)
+    celebrate((x) => (changed.has(x) ? value : isDone(x)))
+    setMany(ids, value, message)
+  }
+
   // Shared with every component below through PlanContext (see PlanContext.js).
-  const actions = { plan, savePlan, isDone, toggle, setMany, openTaskForm: setForm }
+  const actions = { plan, savePlan, isDone, toggle: toggleAndCelebrate, setMany: setManyAndCelebrate, openTaskForm: setForm }
 
   return (
     <PlanContext.Provider value={actions}>
-      <main className="min-h-screen bg-slate-50 py-8 px-4">
+      <div className="min-h-screen bg-slate-50 flex">
+        <Sidebar
+          now={now}
+          view={tab}
+          onChangeView={changeTab}
+          collapsed={collapsed}
+          onToggle={toggleSidebar}
+          onNewMonth={() => setWizardOpen(true)}
+          summary={planSummary(plan, today, isDone)}
+          onMissedClick={() => goTo('today', { anchor: 'catch-up' })}
+        >
+          <MiniCalendar today={today} onPick={goToDate} />
+        </Sidebar>
+
+      <main className="flex-1 min-w-0 py-8 px-4">
         <div className="max-w-2xl mx-auto">
-          <div className="relative mb-6">
-            <h1 className="text-3xl font-bold text-teal-600 text-center">Plan Tracker</h1>
-            <div className="absolute right-0 top-0">
-              <Menu onImport={() => setImporting(true)} onResetAll={resetAll} />
-            </div>
+          <div className="flex justify-end -mb-2">
+            <Menu onImport={() => setImporting(true)} onResetAll={resetAll} />
           </div>
 
           {saveError && (
             <p className="mb-4 rounded-xl bg-amber-100 text-amber-800 text-sm px-4 py-3 whitespace-pre-line">{saveError}</p>
           )}
 
-          <div className="flex justify-center gap-2 mb-6">
-            <TabButton active={tab === 'today'} onClick={() => changeTab('today')}>Today</TabButton>
-            <TabButton active={tab === 'weeks'} onClick={() => changeTab('weeks')}>Weeks</TabButton>
-          </div>
-
           {/* viewTransitionName tells the browser this box is the "page" that slides.
-              The title and tabs stay outside it, so they don't move. */}
+              The side panel stays outside it, so it doesn't move. */}
           <div style={{ viewTransitionName: 'page' }}>
             {/* key: when the key changes, React throws the old element away and mounts
-                a new one, so the fade-in animations replay on every tab/week switch. */}
+                a new one, so the fade-in animations replay on every view/week switch. */}
             {tab === 'today' ? (
               <TodayView key="today" days={days} now={now} />
+            ) : tab === 'months' ? (
+              <MonthsView
+                key="months"
+                today={today}
+                onPickDate={goToDate}
+                onOpenWeek={(w) => goTo('weeks', { week: weeks.findIndex((x) => x.id === w.id) })}
+                onAddMonth={() => setWizardOpen(true)}
+              />
             ) : !week ? (
               <p className="text-center text-slate-500 py-12">No weeks in plan.json yet.</p>
             ) : (
@@ -165,14 +273,28 @@ function Tracker({ plan, savePlan }) {
           </div>
 
           <p className="text-center text-xs text-slate-400 mt-10">
-            Shortcuts: <kbd>T</kbd> Today · <kbd>W</kbd> Weeks · <kbd>←</kbd> <kbd>→</kbd> week · <kbd>N</kbd> add task
+            Shortcuts: <kbd>T</kbd> Today · <kbd>W</kbd> Weeks · <kbd>M</kbd> Months · <kbd>←</kbd> <kbd>→</kbd> week ·{' '}
+            <kbd>N</kbd> add task · <kbd>[</kbd> panel
           </p>
         </div>
       </main>
+      </div>
 
       {form && <TaskForm key={JSON.stringify(form)} form={form} onClose={() => setForm(null)} />}
       {importing && <ImportPanel onClose={() => setImporting(false)} />}
+      {wizardOpen && (
+        <MonthWizard
+          today={today}
+          onClose={() => setWizardOpen(false)}
+          onSaved={() => {
+            setWizardOpen(false)
+            changeTab('months')
+          }}
+        />
+      )}
       <Toast toast={toast} onUndo={undo} onClose={closeToast} />
+      {/* key: a new burst id remounts Confetti, so fast completions each get their own burst. */}
+      {confetti && <Confetti key={confetti.id} big={confetti.big} onDone={() => setConfetti(null)} />}
     </PlanContext.Provider>
   )
 }

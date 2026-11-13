@@ -1,11 +1,13 @@
 // Self-check for the Today-view logic in planHelpers.js (streak, catch-up).
 // Run with: npm run test:helpers
 import assert from 'node:assert/strict'
-import { computeStreak, flattenDays, getTodayContext, mergeTicks, todayString } from '../src/utils/planHelpers.js'
+import { readFileSync } from 'node:fs'
+import { bestStreak, calendarRows, computeStreak, dayStatus, daysBetween, flattenDays, getTodayContext, mergeTicks, monthBounds, newlyCompleted, tasksByType, planSummary, shortDate, todayString } from '../src/utils/planHelpers.js'
 import { validatePlan, validateProgress } from '../src/utils/validatePlan.js'
-import { buildTimeline, formatClock, kathmanduParts, nowAndNext, parseTimeRange, routineTickIds, templateFor } from '../src/utils/timeHelpers.js'
-import { addTask, deleteTask, ensureDay, moveTask, updateTask } from '../src/utils/planEdit.js'
+import { buildTimeline, routineWeekStats, formatClock, kathmanduParts, nowAndNext, parseTimeRange, routineTickIds, templateFor } from '../src/utils/timeHelpers.js'
+import { addTask, addWeek, deleteMonth, deleteTask, deleteWeek, ensureDay, moveTask, taskIdsIn, updateMonth, updateTask, updateWeek } from '../src/utils/planEdit.js'
 import { ImportError, importIntoPlan } from '../src/utils/planImport.js'
+import { applyClaudeReply, buildMonth, claudePrompt, draftSummary, fillWithPattern, newDraft, syncDraft, wizardWeeks } from '../src/utils/monthWizard.js'
 
 const plan = {
   months: [{
@@ -186,6 +188,170 @@ assert.throws(() => importIntoPlan(basePlan, { routine: { weekday: [{ start: '07
 const withOldRoutine = { ...basePlan, routine: { weekday: [{ id: 'french-evening', start: '19:30', end: '20:15', label: 'French focused study', kind: 'french', tickable: true }] } }
 const reRoutine = importIntoPlan(withOldRoutine, { routine: { weekday: [{ start: '19:00', end: '20:00', label: 'French focused study', kind: 'french', tickable: true }] } })
 assert.equal(reRoutine.plan.routine.weekday[0].id, 'french-evening', 'a block with the same label keeps its id')
+
+// --- Build Plan 3: day status, streaks, summary ---
+{
+  const ticks = new Set(['p1', 'q1', 'q2', 's1'])
+  const has = (id) => ticks.has(id)
+  const d = (date, ...ids) => ({ date, tasks: ids.map((id) => ({ id })) })
+  const T = '2026-02-05'
+  assert.equal(dayStatus(d('2026-02-01', 'q1', 'q2'), '2026-02-01', T, has), 'complete')
+  assert.equal(dayStatus(d('2026-02-02', 'p1', 'p2'), '2026-02-02', T, has), 'partial')
+  assert.equal(dayStatus(d('2026-02-03', 'm1'), '2026-02-03', T, has), 'missed')
+  assert.equal(dayStatus(d(T, 'x1'), T, T, has), 'today')
+  assert.equal(dayStatus(d(T, 'p1', 'x1'), T, T, has), 'partial', 'today with some ticked is partial')
+  assert.equal(dayStatus(d('2026-02-09', 'x2'), '2026-02-09', T, has), 'upcoming')
+  assert.equal(dayStatus(d('2026-02-09', 's1'), '2026-02-09', T, has), 'complete', 'a future day ticked early is complete')
+  assert.equal(dayStatus(undefined, '2026-02-04', T, has), 'empty')
+  assert.equal(dayStatus(d('2026-02-04'), '2026-02-04', T, has), 'empty', 'a day with no tasks is empty')
+
+  // Streaks skip dates without tasks: 01 done, 02 (no tasks), 03 done, 04 done, 05 today unfinished.
+  const streakDays = [d('2026-03-01', 'q1'), d('2026-03-02'), d('2026-03-03', 'q2'), d('2026-03-04', 's1'), d('2026-03-05', 'x1')]
+  assert.equal(computeStreak(streakDays, '2026-03-05', has), 3, 'an empty day does not break the streak')
+  assert.equal(bestStreak(streakDays, '2026-03-05', has), 3)
+  const broken = [d('2026-03-01', 'q1'), d('2026-03-02', 'q2'), d('2026-03-03', 'x1'), d('2026-03-04', 's1')]
+  assert.equal(computeStreak(broken, '2026-03-05', has), 1)
+  assert.equal(bestStreak(broken, '2026-03-05', has), 2, 'best streak remembers the longer earlier run')
+
+  assert.equal(daysBetween('2026-11-13', '2027-05-16'), 184)
+  assert.equal(shortDate('2026-12-03'), 'Thu 3 Dec')
+
+  const summaryPlan = {
+    meta: { targetEnd: '2026-02-20', targetMonths: 6 },
+    months: [{ id: 'm1', weeks: [{ id: 'w', days: [
+      d('2026-02-01', 'q1', 'q2'), d('2026-02-02', 'p1', 'p2'), d('2026-02-03', 'm1'), d('2026-02-04'),
+      d(T, 'x1'), d('2026-02-06', 'x2'),
+    ] }] }],
+  }
+  assert.deepEqual(planSummary(summaryPlan, T, has), {
+    plannedDays: 5, completedDays: 1, missedDays: 1, plannedLeft: 2, targetEnd: '2026-02-20', daysToTarget: 15,
+    streak: 0, bestStreak: 1, monthsPlanned: 1, targetMonths: 6,
+  })
+
+  // Calendar helpers.
+  assert.deepEqual(monthBounds('2026-12'), { start: '2026-12-01', end: '2026-12-31' })
+  assert.deepEqual(monthBounds('2026-12', 1), { start: '2027-01-01', end: '2027-01-31' }, 'next month crosses the year')
+  assert.deepEqual(monthBounds('2027-01', -1), { start: '2026-12-01', end: '2026-12-31' })
+  assert.equal(monthBounds('2028-02').end, '2028-02-29', 'leap year')
+  const rows = calendarRows('2026-12-01', '2026-12-31')
+  assert.equal(rows.length, 5)
+  assert.equal(rows[0][0], '2026-11-30', 'rows start on the Monday before the 1st')
+  assert.equal(rows.at(-1)[6], '2027-01-03', 'rows end on a Sunday')
+
+  const metaWarnings = (meta) => validatePlan({ months: [], meta }, { quiet: true })
+  assert.deepEqual(metaWarnings({ start: '2026-11-18', targetEnd: '2027-05-16', targetMonths: 6 }), [])
+  assert.equal(metaWarnings({ start: '2027-05-16', targetEnd: '2026-11-18' }).length, 1, 'start must be before targetEnd')
+  assert.equal(metaWarnings({ targetEnd: '2027-02-30' }).length, 1, 'invalid date')
+  const overlapping = { months: [{ id: 'a', start: '2026-01-01', end: '2026-01-31', weeks: [] }, { id: 'b', start: '2026-01-31', end: '2026-02-28', weeks: [] }] }
+  assert.equal(validatePlan(overlapping, { quiet: true }).length, 1, 'overlapping months are reported')
+}
+
+// --- New month wizard ---
+{
+  const realPlan = JSON.parse(readFileSync(new URL('../data/plan.json', import.meta.url), 'utf8'))
+  const frozen = JSON.stringify(realPlan)
+  let draft = newDraft(realPlan, '2026-11-13')
+  assert.equal(draft.start, '2026-12-21', 'starts the day after the last month')
+
+  assert.deepEqual(wizardWeeks('2026-12-23', 2), [{ start: '2026-12-23', end: '2026-12-27' }, { start: '2026-12-28', end: '2027-01-03' }], 'a mid-week start makes a short first week')
+
+  draft = syncDraft({ ...draft, title: 'Month 2: JavaScript', weekCount: 4 }, realPlan)
+  assert.equal(draft.weeks.length, 4)
+  assert.equal(draft.weeks[0].title, 'Week 6: ', 'week numbers continue from the plan')
+  assert.equal(draft.weeks.at(-1).end, '2027-01-17')
+  draft.weeks[0].days[0].focus = 'JS basics'
+  const resynced = syncDraft({ ...draft, weekCount: 3 }, realPlan)
+  assert.equal(resynced.weeks[0].days[0].focus, 'JS basics', 'typed text survives a re-sync')
+  assert.equal(resynced.weeks.length, 3)
+
+  draft = fillWithPattern(draft)
+  const firstWeekTypes = draft.weeks[0].days.map((d) => d.tasks.map((t) => t.type).join('+'))
+  assert.deepEqual(firstWeekTypes, ['learn+practise', 'learn+practise', 'learn+practise', 'learn+practise', 'learn+practise', 'project', 'review'])
+  draft.weeks[0].days[0].tasks[0].text = 'Functions'
+  draft.weeks[0].days[0].tasks.push({ type: 'learn', time: '', text: 'Arrow functions', resources: 'MDN' })
+  assert.equal(draftSummary(draft), 'Month 2 · 4 weeks · 28 days · 2 tasks', 'empty-text tasks are not counted')
+
+  assert.ok(buildMonth(realPlan, { ...draft, weeks: draft.weeks.map((w, i) => (i ? w : { ...w, title: ' ' })) }).problems, 'a week without a title is refused')
+  let built = buildMonth(realPlan, draft)
+  assert.ok(built.plan, built.problems?.join('; '))
+  const m2 = built.plan.months.at(-1)
+  assert.equal(m2.title, 'Month 2: JavaScript')
+  assert.deepEqual([m2.start, m2.end, m2.weeks.length], ['2026-12-21', '2027-01-17', 4])
+  const m2day = m2.weeks[0].days[0]
+  assert.deepEqual(m2day.tasks.map((t) => t.id), ['2026-12-21-learn', '2026-12-21-learn-2'], 'usual id rule')
+  assert.equal(m2day.focus, 'JS basics', 'focus is copied')
+  assert.equal(JSON.stringify(realPlan), frozen, 'the original plan is not changed')
+
+  const clash = buildMonth(realPlan, syncDraft({ ...draft, start: '2026-12-14' }, realPlan))
+  assert.ok(clash.problems.some((p) => p.includes('overlap')), 'overlapping an existing month is refused')
+
+  assert.ok(claudePrompt(draft).includes('Week 6: '), 'prompt lists the weeks')
+  const reply = JSON.stringify({ weeks: [{ start: '2026-12-21', title: 'Week 6: JS', goal: 'Basics' }], tasks: [{ date: '2026-12-22', type: 'learn', time: '07:00-08:30', text: 'Arrays' }, { date: '2030-01-01', type: 'learn', text: 'x' }] })
+  const applied = applyClaudeReply(draft, '```json ' + reply + ' ```')
+  assert.equal(applied.count, 1)
+  assert.equal(applied.problems.length, 1, 'a date outside the month is reported')
+  assert.equal(applied.draft.weeks[0].title, 'Week 6: JS')
+  assert.deepEqual(applied.draft.weeks[0].days[1].tasks.map((t) => t.text), ['Arrays'], "Claude's tasks replace that day's tasks")
+  assert.equal(applyClaudeReply(draft, 'not json').problems.length, 1)
+}
+
+// --- Edit months and weeks ---
+{
+  const realPlan = JSON.parse(readFileSync(new URL('../data/plan.json', import.meta.url), 'utf8'))
+  const frozen = JSON.stringify(realPlan)
+  const ids = (p) => JSON.stringify(p.months.flatMap((m) => taskIdsIn(m)))
+
+  const renamed = updateWeek(realPlan, 'm1-w2', { title: 'Week 2: OOP', goal: ' New goal ' })
+  const w2 = renamed.months[0].weeks[1]
+  assert.deepEqual([w2.title, w2.goal, w2.start], ['Week 2: OOP', 'New goal', '2026-11-23'])
+  assert.throws(() => updateWeek(realPlan, 'm1-w2', { title: ' ' }))
+
+  const { plan: withWeek, week } = addWeek(realPlan, 'm1')
+  assert.deepEqual([week.id, week.title, week.start, week.end], ['m1-w6', 'Week 6: New week', '2026-12-21', '2026-12-27'])
+  assert.equal(withWeek.months[0].end, '2026-12-27', 'the month stretches to cover the new week')
+  assert.equal(ids(withWeek), ids(realPlan), 'task ids are untouched')
+  assert.equal(JSON.stringify(deleteWeek(withWeek, week.id).months[0].weeks), JSON.stringify(realPlan.months[0].weeks), 'add then delete gives the same weeks back')
+
+  assert.equal(updateMonth(realPlan, 'm1', { title: 'Month 1: Basics', start: '2026-11-18', end: '2026-12-24' }).months[0].title, 'Month 1: Basics')
+  assert.throws(() => updateMonth(realPlan, 'm1', { title: 'M', start: '2026-11-18', end: '2026-12-15' }), /outside the month/, 'refuses to leave weeks (and ticks) outside')
+  assert.throws(() => updateMonth(realPlan, 'm1', { title: 'M', start: '2026-12-01', end: '2026-11-18' }))
+  const twoMonths = { ...realPlan, months: [...realPlan.months, { id: 'm2', title: 'M2', start: '2026-12-21', end: '2027-01-17', weeks: [] }] }
+  assert.throws(() => updateMonth(twoMonths, 'm1', { title: 'M1', start: '2026-11-18', end: '2026-12-22' }), /overlap/)
+  assert.throws(() => addWeek({ ...twoMonths, months: [twoMonths.months[0], { ...twoMonths.months[1], start: '2026-12-22' }] }, 'm1'), /overlap/, 'a new week may not run into the next month')
+
+  assert.equal(taskIdsIn(realPlan.months[0].weeks[1]).length, 12)
+  assert.equal(deleteMonth(twoMonths, 'm2').months.length, 1)
+  assert.equal(JSON.stringify(realPlan), frozen, 'the original plan is not changed')
+}
+
+// --- Stats and celebrations ---
+{
+  const ticked = new Set(['a', 'b'])
+  const before = (id) => ticked.has(id)
+  const after = (id) => id === 'c' || ticked.has(id)
+  assert.equal(newlyCompleted([['a', 'c']], before, after), true, 'ticking the last task completes the group')
+  assert.equal(newlyCompleted([['a', 'b']], before, after), false, 'an already complete group does not count again')
+  assert.equal(newlyCompleted([['a', 'd']], before, after), false)
+  assert.equal(newlyCompleted([[]], before, after), false, 'empty groups never count')
+  assert.equal(newlyCompleted([['a', 'c']], after, before), false, 'unticking never celebrates')
+
+  const typed = { months: [{ weeks: [{ days: [{ date: '2026-01-01', tasks: [{ id: 'a', type: 'learn' }, { id: 'x', type: 'learn' }, { id: 'b', type: 'review' }] }] }] }] }
+  assert.deepEqual(tasksByType(typed, before), { learn: { done: 1, total: 2 }, review: { done: 1, total: 1 } })
+
+  const r = {
+    weekday: [
+      { id: 'wake', start: '06:30', label: 'Wake', kind: 'wake', tickable: true },
+      { id: 'code', start: '07:00', end: '08:30', label: 'Code', kind: 'coding', tickable: true },
+      { id: 'fr', start: '19:30', end: '20:15', label: 'French', kind: 'french', tickable: true },
+      { id: 'meal', start: '12:00', end: '12:30', label: 'Lunch', kind: 'meal', tickable: false },
+    ],
+    saturday: [{ id: 'code', start: '09:00', end: '12:00', label: 'Code', kind: 'coding', tickable: true }],
+  }
+  const routineTicks = new Set(['routine-2026-11-23-wake', 'routine-2026-11-23-code', 'routine-2026-11-24-fr', 'routine-2026-11-28-code', 'routine-2026-11-30-wake'])
+  assert.deepEqual(routineWeekStats(r, '2026-11-23', (id) => routineTicks.has(id)), {
+    ticked: 4, total: 16, codingMinutes: 90 + 180, frenchMinutes: 45, wakeDays: 1,
+  }, 'only this week counts (30 Nov is next week)')
+}
 
 console.log('planHelpers OK: all checks passed')
 

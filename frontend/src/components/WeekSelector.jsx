@@ -1,3 +1,5 @@
+import WeekActions from './WeekActions'
+
 const arrowButton =
   'px-3 py-2 rounded-lg text-teal-600 font-medium transition-[background-color,transform] duration-150 active:scale-95 disabled:active:scale-100 disabled:text-slate-300 disabled:cursor-not-allowed hover:bg-slate-50'
 
@@ -15,16 +17,17 @@ function WeekSelector({ week, onPrev, onNext, hasPrev, hasNext, onUntickWeek, ca
         <button onClick={onNext} disabled={!hasNext} className={arrowButton}>Next →</button>
       </div>
       {week.goal && <p className="text-sm text-slate-600 text-center mt-2 italic">Goal: {week.goal}</p>}
-      {canUntick && (
-        <div className="text-center mt-2">
+      <div className="flex justify-center flex-wrap gap-1 mt-2">
+        <WeekActions week={week} />
+        {canUntick && (
           <button
             onClick={onUntickWeek}
             className="text-xs font-medium text-slate-500 hover:text-teal-600 hover:bg-slate-50 rounded-full px-3 py-1 transition active:scale-95"
           >
             Untick week
           </button>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }

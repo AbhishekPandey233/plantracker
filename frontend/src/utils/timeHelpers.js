@@ -150,3 +150,22 @@ export function buildTimeline(routine, date, tasks = []) {
   items.sort((a, b) => a.start - b.start)
   return { items, anytime }
 }
+
+// Routine numbers for the 7 days from `monday`: ticked blocks (of all tickable ones),
+// minutes of coding and French from ticked blocks' start/end, and days the wake block was ticked.
+export function routineWeekStats(routine, monday, isDone) {
+  const stats = { ticked: 0, total: 0, codingMinutes: 0, frenchMinutes: 0, wakeDays: 0 }
+  for (let i = 0; i < 7; i++) {
+    const date = new Date(Date.parse(monday + 'T00:00:00Z') + i * 86_400_000).toISOString().slice(0, 10)
+    for (const block of routineFor(routine, date).filter((b) => b.tickable)) {
+      stats.total++
+      if (!isDone(routineTickId(date, block.id))) continue
+      stats.ticked++
+      const minutes = block.end ? toMinutes(block.end) - toMinutes(block.start) : 0
+      if (block.kind === 'coding') stats.codingMinutes += minutes
+      if (block.kind === 'french') stats.frenchMinutes += minutes
+      if (block.kind === 'wake') stats.wakeDays++
+    }
+  }
+  return stats
+}
