@@ -1,9 +1,9 @@
 // Logic behind the New month wizard. A "draft" is everything typed so far:
 // { step, title, start, weekCount, weeks: [{ start, end, title, goal, days: [{ date, focus, tasks: [...] }] }] }
-// Saving turns the draft into the "Import from Claude" format and reuses importIntoPlan,
-// so ids, validation and month/week creation work exactly like an import.
+// Saving turns the draft into the "Import from Claude" format and sends it to the
+// backend's /api/import, so ids, checks and month/week creation work exactly like an import.
 import { addDays, mondayOf } from './planHelpers.js'
-import { IMPORT_FORMAT_FOR_CLAUDE, ImportError, importIntoPlan } from './planImport.js'
+import { IMPORT_FORMAT_FOR_CLAUDE } from './planImport.js'
 import { isValidDate } from './validatePlan.js'
 
 // A fresh draft starting the day after the last month ends.
@@ -68,6 +68,7 @@ export function fillWithPattern(draft) {
 }
 
 // The draft in the Import format. Tasks with empty text are left out.
+// "days" carries each day's focus (the backend sets it on days that end up with tasks).
 export function draftToImport(draft) {
   return {
     weeks: draft.weeks.map((w) => ({ monthTitle: draft.title.trim(), title: w.title.trim(), start: w.start, end: w.end, goal: w.goal.trim() })),
@@ -78,10 +79,12 @@ export function draftToImport(draft) {
           .map((t) => ({ date: d.date, type: t.type, time: t.time.trim(), text: t.text.trim(), resources: t.resources.trim() })),
       ),
     ),
+    days: draft.weeks.flatMap((w) => w.days).filter((d) => d.focus.trim()).map((d) => ({ date: d.date, focus: d.focus.trim() })),
   }
 }
 
-// Tries to add the draft to the plan. Returns { plan } or { problems: [...] }. Saves nothing.
+// Quick checks before saving. Returns { input } (the body for POST /api/import)
+// or { problems: [...] }. The server checks everything again when saving.
 export function buildMonth(plan, draft) {
   const problems = []
   if (!draft.title.trim()) problems.push('The month needs a title.')
@@ -94,18 +97,7 @@ export function buildMonth(plan, draft) {
   }
   if (problems.length) return { problems }
 
-  try {
-    const next = importIntoPlan(plan, draftToImport(draft)).plan
-    // The Import format has no day "focus", so copy it over for days that have tasks.
-    const focus = new Map(draft.weeks.flatMap((w) => w.days).map((d) => [d.date, d.focus.trim()]))
-    for (const month of next.months) {
-      for (const week of month.weeks) for (const day of week.days) if (focus.get(day.date)) day.focus = focus.get(day.date)
-    }
-    return { plan: next }
-  } catch (err) {
-    if (err instanceof ImportError) return { problems: err.problems }
-    throw err
-  }
+  return { input: draftToImport(draft) }
 }
 
 // "Month 2 · 4 weeks · 28 days · 48 tasks"

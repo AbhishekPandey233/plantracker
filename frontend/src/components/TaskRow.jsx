@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { usePlanActions } from '../PlanContext'
-import { moveTask, deleteTask } from '../utils/planEdit'
 import { isCustomTask } from '../utils/timeHelpers'
 
 // One colour per task type: text for the label, border for the left edge.
@@ -22,7 +21,7 @@ const linkButton = 'text-xs font-medium text-slate-500 hover:text-teal-600 px-1 
 // from PlanContext (see PlanContext.js), so they don't have to be passed down.
 // "large" makes today's tasks bigger and easier to tap.
 function TaskRow({ task, date, large = false }) {
-  const { plan, savePlan, isDone, toggle, openTaskForm } = usePlanActions()
+  const { editPlan, isDone, toggle, openTaskForm } = usePlanActions()
   // Local state: which inline panel is open ('move', 'delete' or null), and any save error.
   const [panel, setPanel] = useState(null)
   const [moveDate, setMoveDate] = useState(date)
@@ -32,11 +31,13 @@ function TaskRow({ task, date, large = false }) {
   const done = isDone(task.id)
   const mine = isCustomTask(task)
 
-  // Runs a plan change, saves it, and shows the server's error if it refuses.
-  async function save(change) {
+  const url = `/api/tasks/${encodeURIComponent(task.id)}`
+
+  // Sends a change to the server and shows its message if it refuses.
+  async function save(options) {
     setError(null)
     try {
-      await savePlan(change(plan))
+      await editPlan(url, options)
       setPanel(null)
     } catch (err) {
       setError(err.message)
@@ -77,7 +78,7 @@ function TaskRow({ task, date, large = false }) {
             className="flex flex-wrap items-center gap-2 animate-fade-up"
             onSubmit={(e) => {
               e.preventDefault() // stop the browser from reloading the page on submit
-              save((p) => moveTask(p, task.id, moveDate))
+              save({ method: 'PATCH', body: { date: moveDate } })
             }}
           >
             <span className="text-xs text-slate-500">Move to</span>
@@ -90,7 +91,7 @@ function TaskRow({ task, date, large = false }) {
         {panel === 'delete' && (
           <div className="flex items-center gap-2 animate-fade-up">
             <span className="text-xs text-slate-600">Delete this task?</span>
-            <button className="text-xs font-semibold text-white bg-red-600 rounded px-2 py-1 active:scale-95 transition" onClick={() => save((p) => deleteTask(p, task.id))}>
+            <button className="text-xs font-semibold text-white bg-red-600 rounded px-2 py-1 active:scale-95 transition" onClick={() => save({ method: 'DELETE' })}>
               Delete
             </button>
             <button className={linkButton} onClick={() => setPanel(null)}>Cancel</button>

@@ -1,14 +1,12 @@
 import { useState } from 'react'
-import { usePlanActions } from '../PlanContext'
 import Modal from './Modal'
 
 const input = 'w-full rounded-lg border border-slate-200 px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500'
 
 // A small dialog that changes the plan: an edit form ("fields") or a yes/no
-// confirmation ("message", "danger"). makePlan(values) returns the new plan or
-// throws an Error whose message is shown; the new plan is then saved to plan.json.
-function PlanDialog({ title, fields = [], initial = {}, message, confirmLabel = 'Save', danger = false, makePlan, onClose }) {
-  const { savePlan } = usePlanActions()
+// confirmation ("message", "danger"). onSave(values) sends the change to the server;
+// if the server refuses, its message is shown and the dialog stays open.
+function PlanDialog({ title, fields = [], initial = {}, message, confirmLabel = 'Save', danger = false, onSave, onClose }) {
   const [values, setValues] = useState(initial)
   const [error, setError] = useState(null)
   const [saving, setSaving] = useState(false)
@@ -18,7 +16,7 @@ function PlanDialog({ title, fields = [], initial = {}, message, confirmLabel = 
     setError(null)
     setSaving(true)
     try {
-      await savePlan(makePlan(values))
+      await onSave(values)
       onClose()
     } catch (err) {
       setError(err.message)

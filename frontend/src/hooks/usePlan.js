@@ -2,30 +2,39 @@ import { useCallback, useEffect, useState } from 'react'
 import { api } from '../utils/api'
 import { validatePlan } from '../utils/validatePlan'
 
-// Custom hook: loads plan.json from the local data API once, when the app starts,
-// and saves changes back to it.
-// Returns { plan, error, savePlan }: plan is null while loading, error is a message if loading failed.
+// Custom hook: loads the plan from the backend when the app starts.
+// Returns { plan, error, editPlan }: plan is null while loading, error is a message if loading failed.
 export function usePlan() {
   const [plan, setPlan] = useState(null)
   const [error, setError] = useState(null)
 
-  // useEffect with [] runs once after the first render: the right place to fetch data.
-  useEffect(() => {
-    api('/api/plan')
-      .then((data) => {
+  // useCallback with []: the same function on every render, so it's safe in useEffect's list.
+  const reload = useCallback(
+    () =>
+      api('/api/plan').then((data) => {
         validatePlan(data) // problems show as warnings in the browser console
         setPlan(data)
-      })
-      .catch((err) => setError(err.message))
-  }, [])
+      }),
+    [],
+  )
 
-  // Saves a changed plan to plan.json. The server checks it first; if it refuses,
-  // this throws with the server's list of problems (the form shows them).
-  // The page only updates once the file has really been saved.
-  const savePlan = useCallback(async (next) => {
-    await api('/api/plan', next)
-    setPlan(next)
-  }, [])
+  // useEffect with [reload] runs once after the first render: the right place to fetch data.
+  useEffect(() => {
+    reload().catch((err) => setError(err.message))
+  }, [reload])
 
-  return { plan, error, savePlan }
+  // Changes the plan on the server, e.g. editPlan('/api/tasks', { method: 'POST', body }),
+  // then loads the new plan. The server does the work (ids, new weeks, checks) and
+  // refuses with a message if the change isn't allowed; that error is thrown on to
+  // the form that asked. The page only updates once the change is really saved.
+  const editPlan = useCallback(
+    async (url, options) => {
+      const result = await api(url, options)
+      await reload()
+      return result
+    },
+    [reload],
+  )
+
+  return { plan, error, editPlan }
 }

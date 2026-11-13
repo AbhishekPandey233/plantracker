@@ -22,25 +22,41 @@
 }
 
 /* Animations. In Tailwind v4, --animate-* in @theme creates an animate-* class
-   (e.g. animate-fade-up). Only transform/opacity animate, which keeps it smooth. */
-@theme {
-  --animate-fade-up: fade-up 0.55s ease-out both;
-  --animate-pop: pop 0.5s ease-out both;
+   (e.g. animate-fade-up). Only transform/opacity animate, which keeps it smooth.
 
-  /* More steps (keyframes) = motion that's easier to follow: rise, overshoot a little, settle. */
-  @keyframes fade-up {
-    0% { opacity: 0; transform: translateY(18px); }
-    40% { opacity: 0.7; transform: translateY(4px); }
-    70% { opacity: 1; transform: translateY(-2px); }
-    100% { opacity: 1; transform: translateY(0); }
+   Why one easing curve instead of many keyframes: a CSS timing function applies to
+   EACH segment between keyframes, so "rise 40% / overshoot 70% / settle 100%" with
+   ease-out slowed to a near-stop three times on the way, which looked like dropped
+   frames. Now the rise, overshoot and settle all come from one spring curve
+   (linear() below, made from a real damped spring), so the motion never stalls.
+   Opacity runs as a separate, quicker animation so it isn't bouncy. */
+
+/* Spring curves (plain variables, so the page slides below can use them too):
+   values above 1 are the overshoot, the dips back below 1 are the bounce. */
+:root {
+  --ease-spring-rise: linear(0, 0.04, 0.139, 0.271, 0.417, 0.561, 0.693, 0.807, 0.9, 0.971, 1.023, 1.056, 1.076, 1.083, 1.082, 1.075, 1.065, 1.053, 1.041, 1.029, 1.019, 1.011, 1.004, 0.999, 0.996, 0.994, 0.993, 0.993, 0.993, 0.994, 1);
+  --ease-spring-pop: linear(0, 0.06, 0.212, 0.414, 0.629, 0.83, 0.997, 1.12, 1.197, 1.23, 1.229, 1.202, 1.159, 1.109, 1.06, 1.017, 0.983, 0.961, 0.949, 0.945, 0.949, 0.958, 0.969, 0.981, 0.992, 1.001, 1.007, 1.011, 1.013, 1.012, 1);
+}
+
+/* Plain CSS (not in @theme), so it's always in the output: the page slides use it too. */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@theme {
+  /* Rise 18px, overshoot about 1.5px, settle. */
+  --animate-fade-up: rise 0.6s var(--ease-spring-rise) both, fade-in 0.35s ease-out both;
+  /* Grow from half size past full size (about 1.12), bounce back under it, settle. */
+  --animate-pop: grow 0.6s var(--ease-spring-pop) both, fade-in 0.2s ease-out both;
+
+  @keyframes rise {
+    from { transform: translateY(18px); }
+    to { transform: translateY(0); }
   }
-  /* Grow past full size, bounce back under it, then settle. */
-  @keyframes pop {
-    0% { opacity: 0; transform: scale(0.5); }
-    45% { opacity: 1; transform: scale(1.12); }
-    70% { transform: scale(0.95); }
-    85% { transform: scale(1.03); }
-    100% { opacity: 1; transform: scale(1); }
+  @keyframes grow {
+    from { transform: scale(0.5); }
+    to { transform: scale(1); }
   }
 }
 
@@ -51,31 +67,56 @@
 /* Page transition (Today <-> Weeks, Prev/Next week), using the browser's View Transitions API.
    The browser takes a picture of the old page and the new page, then animates between them.
    --dir is set from JS: 1 = going forward (slide left), -1 = going back (slide right). */
+/* Only the page column is captured. By default the browser also snapshots and
+   crossfades the whole window (the "root"), which measured slower and freezes the
+   side panel during the slide. */
+:root {
+  view-transition-name: none;
+}
+/* The browser's own group animation resizes the box from the old page's height to
+   the new one's on every frame (layout work, measured 60-90ms frames on Months).
+   Our slide doesn't need it: the new page takes its size at once. */
+::view-transition-group(page) {
+  animation: none;
+}
 ::view-transition-old(page) {
-  animation: page-out 0.3s ease-in both;
+  animation: page-out 0.28s cubic-bezier(0.4, 0, 1, 1) both, fade-out 0.28s linear both;
 }
 ::view-transition-new(page) {
-  animation: page-in 0.55s ease-out both;
+  animation: page-in 0.55s var(--ease-spring-rise) both, fade-in 0.3s ease-out both;
 }
 @keyframes page-out {
-  0% { opacity: 1; transform: translateX(0); }
-  50% { opacity: 0.6; transform: translateX(calc(var(--dir, 1) * -20px)); }
-  100% { opacity: 0; transform: translateX(calc(var(--dir, 1) * -60px)); }
+  to { transform: translateX(calc(var(--dir, 1) * -60px)); }
 }
+/* Slides in 60px, overshoots about 5px, settles. */
 @keyframes page-in {
-  0% { opacity: 0; transform: translateX(calc(var(--dir, 1) * 60px)); }
-  50% { opacity: 0.8; transform: translateX(calc(var(--dir, 1) * 10px)); }
-  80% { opacity: 1; transform: translateX(calc(var(--dir, 1) * -3px)); }
-  100% { opacity: 1; transform: translateX(0); }
+  from { transform: translateX(calc(var(--dir, 1) * 60px)); }
+}
+@keyframes fade-out {
+  to { opacity: 0; }
 }
 
-/* Confetti (Confetti.jsx): each piece falls from above the top, swaying side to side
-   on the way down (--dx sets how far), spinning (--rot), and fades out at the end. */
-@keyframes confetti {
-  0% { opacity: 1; transform: translate(0, -20px) rotate(0); }
-  20% { transform: translate(calc(var(--dx) * 0.5), 18vh) rotate(calc(var(--rot) * 0.2)); }
-  40% { transform: translate(calc(var(--dx) * 0.1), 38vh) rotate(calc(var(--rot) * 0.4)); }
-  60% { transform: translate(calc(var(--dx) * 0.8), 58vh) rotate(calc(var(--rot) * 0.6)); }
-  80% { opacity: 1; transform: translate(calc(var(--dx) * 0.4), 78vh) rotate(calc(var(--rot) * 0.8)); }
-  100% { opacity: 0; transform: translate(var(--dx), 100vh) rotate(var(--rot)); }
+/* Confetti (Confetti.jsx). Each piece is two elements, so every motion gets its own
+   smooth animation instead of one curve chopped into segments:
+   - outer: falls (translate, one long curve), sways side to side (transform), fades at the end,
+   - inner: spins (rotate) at a steady speed.
+   --dx sets how far it drifts, --rot how far it spins. */
+@keyframes confetti-fall {
+  from { translate: 0 -20px; }
+  to { translate: 0 100vh; }
+}
+/* ease-in-out on each step: slows only at the turns, like a real flutter. */
+@keyframes confetti-sway {
+  0% { transform: translateX(0); }
+  25% { transform: translateX(calc(var(--dx) * 0.5)); }
+  50% { transform: translateX(calc(var(--dx) * 0.1)); }
+  75% { transform: translateX(calc(var(--dx) * 0.8)); }
+  100% { transform: translateX(var(--dx)); }
+}
+@keyframes confetti-spin {
+  to { rotate: var(--rot); }
+}
+@keyframes confetti-fade {
+  0%, 80% { opacity: 1; }
+  100% { opacity: 0; }
 }

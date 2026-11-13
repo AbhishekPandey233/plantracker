@@ -34,7 +34,7 @@ function loadDraft() {
 // The New month wizard: Basics -> Weeks -> Days and tasks -> Preview and save.
 // Everything typed is kept in localStorage, so closing it doesn't lose work.
 function MonthWizard({ today, onClose, onSaved }) {
-  const { plan, savePlan } = usePlanActions()
+  const { plan, editPlan } = usePlanActions()
   // useState with a function: it runs once, on the first render only.
   const [draft, setDraft] = useState(() => loadDraft() ?? newDraft(plan, today))
   const [pasting, setPasting] = useState(false)
@@ -95,11 +95,11 @@ function MonthWizard({ today, onClose, onSaved }) {
     }
   }
 
-  async function save(newPlan) {
+  async function save(input) {
     setSaving(true)
     setSaveError(null)
     try {
-      await savePlan(newPlan)
+      await editPlan('/api/import', { method: 'POST', body: input })
       localStorage.removeItem(DRAFT_KEY)
       onSaved()
     } catch (err) {
@@ -260,7 +260,7 @@ function MonthWizard({ today, onClose, onSaved }) {
           {step < 4 ? (
             <button className={primary} disabled={!basicsOk} onClick={() => goToStep(step + 1)}>Next</button>
           ) : (
-            <button className={primary} disabled={!built.plan || saving} onClick={() => save(built.plan)}>
+            <button className={primary} disabled={!built.input || saving} onClick={() => save(built.input)}>
               {saving ? 'Saving…' : 'Save month'}
             </button>
           )}

@@ -1,34 +1,41 @@
 import { useState } from 'react'
 import { usePlanActions } from '../PlanContext'
-import { IMPORT_FORMAT_FOR_CLAUDE, ImportError, importIntoPlan } from '../utils/planImport'
+import { api } from '../utils/api'
+import { IMPORT_FORMAT_FOR_CLAUDE } from '../utils/planImport'
 import Modal from './Modal'
 
 const button = 'px-4 py-2 rounded-lg text-sm font-medium transition active:scale-95'
 
 // "Import from Claude": paste JSON, see a preview, then Save or Cancel.
 function ImportPanel({ onClose }) {
-  const { plan, savePlan } = usePlanActions()
+  const { editPlan } = usePlanActions()
   const [text, setText] = useState('')
-  const [result, setResult] = useState(null) // { plan, summary } once previewed
+  const [result, setResult] = useState(null) // { input, summary } once previewed
   const [problems, setProblems] = useState([])
   const [copied, setCopied] = useState(false)
   const [saving, setSaving] = useState(false)
 
-  function preview() {
+  // Preview = the server runs the whole import as a dry run (same checks, nothing saved).
+  async function preview() {
     setProblems([])
+    let input
     try {
-      setResult(importIntoPlan(plan, JSON.parse(text)))
+      input = JSON.parse(text)
     } catch (err) {
-      if (err instanceof ImportError) setProblems(err.problems)
-      else if (err instanceof SyntaxError) setProblems([`That isn't valid JSON: ${err.message}`])
-      else setProblems([err.message])
+      return setProblems([`That isn't valid JSON: ${err.message}`])
+    }
+    try {
+      const { summary } = await api('/api/import?dry_run=true', { method: 'POST', body: input })
+      setResult({ input, summary })
+    } catch (err) {
+      setProblems(err.message.split('\n'))
     }
   }
 
   async function save() {
     setSaving(true)
     try {
-      await savePlan(result.plan)
+      await editPlan('/api/import', { method: 'POST', body: result.input })
       onClose()
     } catch (err) {
       setProblems(err.message.split('\n'))

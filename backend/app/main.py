@@ -4,13 +4,14 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
+from sqlalchemy.exc import IntegrityError
 from starlette.exceptions import HTTPException
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app.core.config import settings
 from app.core.logging import logger, setup_logging
 from app.core.security import SECURITY_HEADERS, SecurityMiddleware
-from app.routers import health
+from app.routers import health, journal, months, plan, reschedule, tasks, ticks
 
 setup_logging(settings.log_file)
 
@@ -62,7 +63,17 @@ async def validation_error(request: Request, exc: RequestValidationError):
     return JSONResponse({"error": "Invalid request", "details": details}, status_code=422)
 
 
-app.include_router(health.router)
+@app.exception_handler(IntegrityError)
+async def integrity_error(request: Request, exc: IntegrityError):
+    # A database rule (CHECK, UNIQUE, ...) refused the change. The schemas should catch
+    # bad input first; this is the safety net. Details go to the log only.
+    logger.warning("Database rule refused %s %s: %s", request.method, request.url.path, exc.orig.__class__.__name__)
+    return JSONResponse({"error": "That change breaks a rule of the plan data"}, status_code=400)
+
+
+# Every router here is protected by SecurityMiddleware (API key etc.) automatically.
+for router_module in (health, plan, ticks, tasks, months, journal, reschedule):
+    app.include_router(router_module.router)
 
 
 def openapi_with_api_key():

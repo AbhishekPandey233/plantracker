@@ -24,6 +24,7 @@ Thumbs.db
 *.sln
 *.sw?
 
-# Secrets - this app has none today, but never commit these if added later
+# Secrets: .env.local holds the API key. Never commit it (.env.example is the template).
 .env
 .env.*
+!.env.example

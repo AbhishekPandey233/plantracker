@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.security import write_limiter
-from app.db.session import engine
+from app.db.session import engine, get_db
 from app.main import app
 
 # 127.0.0.1, because TrustedHostMiddleware refuses TestClient's default host "testserver".
@@ -16,14 +16,28 @@ API_KEY = settings.api_key.get_secret_value()
 
 
 @pytest.fixture
-def client():
-    """Calls the app like the Vite proxy does: with the API key."""
-    return TestClient(app, base_url=BASE_URL, headers={"X-API-Key": API_KEY})
+def client(db):
+    """Calls the app like the Vite proxy does: with the API key.
+    dependency_overrides swaps get_db for the test's throw-away session, so
+    endpoints never change the real data."""
+
+    def test_get_db():
+        # Like the real get_db: a refused request (an exception) throws away its
+        # unsaved changes. Here that rolls back to the last commit's savepoint.
+        try:
+            yield db
+        except Exception:
+            db.rollback()
+            raise
+
+    app.dependency_overrides[get_db] = test_get_db
+    yield TestClient(app, base_url=BASE_URL, headers={"X-API-Key": API_KEY})
+    app.dependency_overrides.clear()
 
 
 @pytest.fixture
-def anon():
-    """Calls the app without the API key."""
+def anon(client):
+    """Calls the app without the API key (same throw-away session)."""
     return TestClient(app, base_url=BASE_URL)
 
 

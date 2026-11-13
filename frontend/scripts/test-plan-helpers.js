@@ -2,11 +2,10 @@
 // Run with: npm run test:helpers
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { bestStreak, calendarRows, computeStreak, dayStatus, daysBetween, flattenDays, getTodayContext, mergeTicks, monthBounds, newlyCompleted, tasksByType, planSummary, shortDate, todayString } from '../src/utils/planHelpers.js'
+import { bestStreak, calendarRows, computeStreak, dayStatus, daysBetween, flattenDays, getTodayContext, deleteMessage, filterHistory, firstUnfinishedDay, monthBounds, newlyCompleted, tasksByType, planSummary, shortDate, todayString } from '../src/utils/planHelpers.js'
 import { validatePlan, validateProgress } from '../src/utils/validatePlan.js'
 import { buildTimeline, routineWeekStats, formatClock, kathmanduParts, nowAndNext, parseTimeRange, routineTickIds, templateFor } from '../src/utils/timeHelpers.js'
-import { addTask, addWeek, deleteMonth, deleteTask, deleteWeek, ensureDay, moveTask, taskIdsIn, updateMonth, updateTask, updateWeek } from '../src/utils/planEdit.js'
-import { ImportError, importIntoPlan } from '../src/utils/planImport.js'
+import { tickUrl } from '../src/utils/api.js'
 import { applyClaudeReply, buildMonth, claudePrompt, draftSummary, fillWithPattern, newDraft, syncDraft, wizardWeeks } from '../src/utils/monthWizard.js'
 
 const plan = {
@@ -60,13 +59,6 @@ globalThis.Date = class extends RealDate {
 }
 assert.equal(todayString(), '2026-11-20', 'today is the Kathmandu date, not the UTC date')
 globalThis.Date = RealDate
-
-// mergeTicks: a tick on either side stays ticked; an untick on one side doesn't erase a tick.
-assert.deepEqual(
-  mergeTicks({ a: true, b: false, c: false }, { b: true, c: false, d: true }),
-  { a: true, b: true, c: false, d: true },
-  'merge keeps every tick from both sides',
-)
 
 // validateProgress: only { "id": true/false } is allowed.
 assert.deepEqual(validateProgress({ a: true, b: false }), [], 'valid progress has no problems')
@@ -135,59 +127,6 @@ status = nowAndNext(timeline.items, 6 * 60 + 30) // exactly wake-up time
 assert.deepEqual(status.nowKeys, [], 'a one-moment block is never "now"')
 assert.deepEqual(nowAndNext(timeline.items, 20 * 60 + 40).nowKeys, ['task-custom-2026-11-20-abcd'], 'my timed task can be now')
 assert.deepEqual(routineTickIds(routine, '2026-11-20'), ['routine-2026-11-20-wake', 'routine-2026-11-20-coding', 'routine-2026-11-20-french'], 'routine tick ids for tickable blocks')
-
-// ---------- Add, edit, move, delete (Phase 5) ----------
-const basePlan = {
-  months: [{
-    id: 'm1', title: 'Month 1', start: '2026-11-18', end: '2026-12-20',
-    weeks: [{ id: 'm1-w1', title: 'Week 1', start: '2026-11-18', end: '2026-11-22', goal: '', days: [
-      { date: '2026-11-18', focus: 'Setup', tasks: [{ id: '2026-11-18-learn', type: 'learn', time: '7:00-8:30', text: 'Install', resources: '' }] },
-    ] }],
-  }],
-}
-const frozenBase = JSON.stringify(basePlan)
-const fixedRandom = () => 0 // always "a", so the id is custom-<date>-aaaa
-const added = addTask(basePlan, { date: '2026-11-19', type: 'french', time: '19:30-20:15', text: 'Duolingo', resources: '' }, fixedRandom)
-assert.equal(added.id, 'custom-2026-11-19-aaaa', 'custom id format')
-assert.equal(JSON.stringify(basePlan), frozenBase, 'the original plan is not changed')
-assert.deepEqual(validatePlan(added.plan, q), [], 'plan with my task is valid')
-let plan2 = updateTask(added.plan, added.id, { text: 'Duolingo 20 min' })
-assert.equal(plan2.months[0].weeks[0].days[1].tasks[0].text, 'Duolingo 20 min', 'edit changes the text')
-plan2 = moveTask(plan2, '2026-11-18-learn', '2026-11-20')
-const movedDay = plan2.months[0].weeks[0].days.find((d) => d.date === '2026-11-20')
-assert.equal(movedDay.tasks[0].id, '2026-11-18-learn', 'a moved task keeps its original id')
-plan2 = moveTask(plan2, added.id, '2026-12-25') // no week exists for this date yet
-assert.deepEqual(validatePlan(plan2, q), [], 'moving to a date with no week creates a valid week')
-const newWeek = plan2.months.flatMap((m) => m.weeks).find((w) => w.start <= '2026-12-25' && '2026-12-25' <= w.end)
-assert.deepEqual([newWeek.start, newWeek.end], ['2026-12-21', '2026-12-27'], 'the new week runs Monday to Sunday')
-plan2 = deleteTask(plan2, added.id)
-assert.ok(!JSON.stringify(plan2).includes(added.id), 'delete removes the task')
-// Week 1 starts on a Wednesday, so a new week for the Tuesday before must stop before it.
-const early = structuredClone(basePlan)
-ensureDay(early, '2026-11-17')
-assert.deepEqual(validatePlan(early, q), [], 'a new week next to an existing one does not overlap it')
-const earlyWeek = early.months.flatMap((m) => m.weeks).find((w) => w.days.some((d) => d.date === '2026-11-17'))
-assert.deepEqual([earlyWeek.start, earlyWeek.end], ['2026-11-16', '2026-11-17'], 'the new week stops before week 1 starts')
-
-// ---------- Import from Claude (Phase 6) ----------
-const imported = importIntoPlan(basePlan, {
-  weeks: [{ monthTitle: 'Month 2: JavaScript', title: 'Week 6: JS basics', start: '2026-12-21', end: '2026-12-27', goal: 'Functions' }],
-  tasks: [
-    { date: '2026-12-21', type: 'learn', time: '07:00-08:30', text: 'Functions', resources: 'MDN' },
-    { date: '2026-12-21', type: 'learn', text: 'Arrow functions' },
-    { date: '2026-11-18', type: 'learn', text: 'Extra on day 1' },
-  ],
-})
-assert.deepEqual(imported.summary.tasks.map((t) => t.id), ['2026-11-18-learn-2', '2026-12-21-learn', '2026-12-21-learn-2'], 'ids are <date>-<type>, then -2')
-assert.deepEqual(imported.summary.newWeeks, ['Week 6: JS basics'])
-assert.equal(imported.plan.months.find((m) => m.title === 'Month 2: JavaScript').weeks[0].days[0].tasks.length, 2, 'tasks land in the imported week')
-assert.equal(JSON.stringify(basePlan), frozenBase, 'import does not change the original plan')
-assert.throws(() => importIntoPlan(basePlan, { tasks: [{ id: '2026-11-18-learn', date: '2026-11-19', type: 'learn', text: 'x' }] }), ImportError, 'an existing id is rejected')
-assert.throws(() => importIntoPlan(basePlan, { tasks: [{ date: '2026-11-19', type: 'learn', text: 'ok' }, { date: 'tomorrow', type: 'learn', text: 'bad' }] }), ImportError, 'one bad task rejects the whole import')
-assert.throws(() => importIntoPlan(basePlan, { routine: { weekday: [{ start: '07:00', end: '08:00', label: 'A', kind: 'rest' }, { start: '07:30', end: '09:00', label: 'B', kind: 'rest' }] } }), ImportError, 'overlapping routine is rejected')
-const withOldRoutine = { ...basePlan, routine: { weekday: [{ id: 'french-evening', start: '19:30', end: '20:15', label: 'French focused study', kind: 'french', tickable: true }] } }
-const reRoutine = importIntoPlan(withOldRoutine, { routine: { weekday: [{ start: '19:00', end: '20:00', label: 'French focused study', kind: 'french', tickable: true }] } })
-assert.equal(reRoutine.plan.routine.weekday[0].id, 'french-evening', 'a block with the same label keeps its id')
 
 // --- Build Plan 3: day status, streaks, summary ---
 {
@@ -273,13 +212,12 @@ assert.equal(reRoutine.plan.routine.weekday[0].id, 'french-evening', 'a block wi
 
   assert.ok(buildMonth(realPlan, { ...draft, weeks: draft.weeks.map((w, i) => (i ? w : { ...w, title: ' ' })) }).problems, 'a week without a title is refused')
   let built = buildMonth(realPlan, draft)
-  assert.ok(built.plan, built.problems?.join('; '))
-  const m2 = built.plan.months.at(-1)
-  assert.equal(m2.title, 'Month 2: JavaScript')
-  assert.deepEqual([m2.start, m2.end, m2.weeks.length], ['2026-12-21', '2027-01-17', 4])
-  const m2day = m2.weeks[0].days[0]
-  assert.deepEqual(m2day.tasks.map((t) => t.id), ['2026-12-21-learn', '2026-12-21-learn-2'], 'usual id rule')
-  assert.equal(m2day.focus, 'JS basics', 'focus is copied')
+  assert.ok(built.input, built.problems?.join('; '))
+  const { weeks: inWeeks, tasks: inTasks, days: inDays } = built.input
+  assert.deepEqual(inWeeks.map((w) => [w.monthTitle, w.start, w.end]).at(-1), ['Month 2: JavaScript', '2027-01-11', '2027-01-17'])
+  assert.equal(inWeeks.length, 4)
+  assert.deepEqual(inTasks.map((t) => [t.date, t.text]), [['2026-12-21', 'Functions'], ['2026-12-21', 'Arrow functions']], 'only tasks with text are sent')
+  assert.deepEqual(inDays, [{ date: '2026-12-21', focus: 'JS basics' }], 'day focus is sent')
   assert.equal(JSON.stringify(realPlan), frozen, 'the original plan is not changed')
 
   const clash = buildMonth(realPlan, syncDraft({ ...draft, start: '2026-12-14' }, realPlan))
@@ -293,35 +231,6 @@ assert.equal(reRoutine.plan.routine.weekday[0].id, 'french-evening', 'a block wi
   assert.equal(applied.draft.weeks[0].title, 'Week 6: JS')
   assert.deepEqual(applied.draft.weeks[0].days[1].tasks.map((t) => t.text), ['Arrays'], "Claude's tasks replace that day's tasks")
   assert.equal(applyClaudeReply(draft, 'not json').problems.length, 1)
-}
-
-// --- Edit months and weeks ---
-{
-  const realPlan = JSON.parse(readFileSync(new URL('../data/plan.json', import.meta.url), 'utf8'))
-  const frozen = JSON.stringify(realPlan)
-  const ids = (p) => JSON.stringify(p.months.flatMap((m) => taskIdsIn(m)))
-
-  const renamed = updateWeek(realPlan, 'm1-w2', { title: 'Week 2: OOP', goal: ' New goal ' })
-  const w2 = renamed.months[0].weeks[1]
-  assert.deepEqual([w2.title, w2.goal, w2.start], ['Week 2: OOP', 'New goal', '2026-11-23'])
-  assert.throws(() => updateWeek(realPlan, 'm1-w2', { title: ' ' }))
-
-  const { plan: withWeek, week } = addWeek(realPlan, 'm1')
-  assert.deepEqual([week.id, week.title, week.start, week.end], ['m1-w6', 'Week 6: New week', '2026-12-21', '2026-12-27'])
-  assert.equal(withWeek.months[0].end, '2026-12-27', 'the month stretches to cover the new week')
-  assert.equal(ids(withWeek), ids(realPlan), 'task ids are untouched')
-  assert.equal(JSON.stringify(deleteWeek(withWeek, week.id).months[0].weeks), JSON.stringify(realPlan.months[0].weeks), 'add then delete gives the same weeks back')
-
-  assert.equal(updateMonth(realPlan, 'm1', { title: 'Month 1: Basics', start: '2026-11-18', end: '2026-12-24' }).months[0].title, 'Month 1: Basics')
-  assert.throws(() => updateMonth(realPlan, 'm1', { title: 'M', start: '2026-11-18', end: '2026-12-15' }), /outside the month/, 'refuses to leave weeks (and ticks) outside')
-  assert.throws(() => updateMonth(realPlan, 'm1', { title: 'M', start: '2026-12-01', end: '2026-11-18' }))
-  const twoMonths = { ...realPlan, months: [...realPlan.months, { id: 'm2', title: 'M2', start: '2026-12-21', end: '2027-01-17', weeks: [] }] }
-  assert.throws(() => updateMonth(twoMonths, 'm1', { title: 'M1', start: '2026-11-18', end: '2026-12-22' }), /overlap/)
-  assert.throws(() => addWeek({ ...twoMonths, months: [twoMonths.months[0], { ...twoMonths.months[1], start: '2026-12-22' }] }, 'm1'), /overlap/, 'a new week may not run into the next month')
-
-  assert.equal(taskIdsIn(realPlan.months[0].weeks[1]).length, 12)
-  assert.equal(deleteMonth(twoMonths, 'm2').months.length, 1)
-  assert.equal(JSON.stringify(realPlan), frozen, 'the original plan is not changed')
 }
 
 // --- Stats and celebrations ---
@@ -353,6 +262,35 @@ assert.equal(reRoutine.plan.routine.weekday[0].id, 'french-evening', 'a block wi
   }, 'only this week counts (30 Nov is next week)')
 }
 
+// --- Talking to the backend ---
+assert.equal(tickUrl('2026-11-18-learn'), '/api/ticks/tasks/2026-11-18-learn')
+assert.equal(tickUrl('custom-2026-11-20-kqzt'), '/api/ticks/tasks/custom-2026-11-20-kqzt')
+assert.equal(tickUrl('routine-2026-11-18-french-evening'), '/api/ticks/routine/2026-11-18/french-evening')
+assert.equal(deleteMessage('This week', { tasks: 1, ticks: 2 }), 'This week has 1 task and 2 ticks. Deleting removes the tasks and their ticks for good.')
+
+// --- History filters (Phase 7) ---
+{
+  const hist = [
+    { date: '3', status: 'complete', hasJournal: true },
+    { date: '2', status: 'partial', hasJournal: false },
+    { date: '1', status: 'missed', hasJournal: true },
+    { date: '0', status: 'empty', hasJournal: true },
+  ]
+  const dates = (f) => filterHistory(hist, f).map((d) => d.date).join(',')
+  assert.equal(dates('all'), '3,2,1,0')
+  assert.equal(dates('complete'), '3')
+  assert.equal(dates('partial'), '2')
+  assert.equal(dates('missed'), '1')
+  assert.equal(dates('journal'), '3,1,0', 'has journal ignores the status')
+}
+
+// --- Reschedule default (Phase 8) ---
+{
+  const d = (date, ...ids) => ({ date, tasks: ids.map((id) => ({ id })) })
+  const ticked = new Set(['a', 'b'])
+  const has = (id) => ticked.has(id)
+  assert.equal(firstUnfinishedDay([d('2026-01-03', 'c'), d('2026-01-01', 'a'), d('2026-01-02'), d('2026-01-04', 'b')], has), '2026-01-03', 'skips done and empty days')
+  assert.equal(firstUnfinishedDay([d('2026-01-01', 'a')], has), null, 'everything done')
+}
+
 console.log('planHelpers OK: all checks passed')
-
-

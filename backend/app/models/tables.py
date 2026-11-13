@@ -21,6 +21,7 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 TASK_TYPES = ("learn", "practise", "project", "review", "french", "personal")
@@ -113,10 +114,14 @@ class Week(Base):
 
 class Day(Base):
     __tablename__ = "days"
+    # One day per date. DEFERRED: checked at COMMIT, not after each row, so a
+    # reschedule can move many days in one transaction even when, halfway through,
+    # two of them briefly share a date.
+    __table_args__ = (UniqueConstraint("date", deferrable=True, initially="DEFERRED"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)  # integer primary key = auto-numbered
     week_id: Mapped[str] = mapped_column(ForeignKey("weeks.id", ondelete="CASCADE"), index=True)
-    date: Mapped[dt.date] = mapped_column(Date, unique=True)
+    date: Mapped[dt.date] = mapped_column(Date)
     focus: Mapped[str] = mapped_column(String(200), default="", server_default="")
 
     week: Mapped[Week] = relationship(back_populates="days")
@@ -226,3 +231,19 @@ class JournalEntry(Base):
     updated_at: Mapped[dt.datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
+
+
+class ScheduleShift(Base):
+    """One "Reschedule": days from from_date on moved by `days`. `changes` keeps every
+    old value (day dates and weeks, week and month ranges, weeks and months it created),
+    so the last shift can be undone exactly."""
+
+    __tablename__ = "schedule_shifts"
+    __table_args__ = (CheckConstraint("days > 0", name="days_positive"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    from_date: Mapped[dt.date] = mapped_column(Date)
+    days: Mapped[int] = mapped_column(SmallInteger)
+    changes: Mapped[dict] = mapped_column(JSONB)
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    undone_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))

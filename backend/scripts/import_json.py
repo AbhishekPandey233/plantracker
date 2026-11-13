@@ -15,12 +15,10 @@ Run from backend/:
 
 import argparse
 import json
-import re
 import shutil
 import sys
 from collections import Counter, defaultdict
-from datetime import date, datetime, time, timedelta, timezone
-from pathlib import Path
+from datetime import date, time
 
 from sqlalchemy import func, select, tuple_
 from sqlalchemy.orm import Session
@@ -28,12 +26,11 @@ from sqlalchemy.orm import Session
 from app.core.config import BACKEND_DIR
 from app.db.session import SessionLocal
 from app.models.tables import Day, Month, PlanMeta, RoutineBlock, RoutineTick, Task, TaskTick, Week
+from app.services.plan import ROUTINE_TICK, parse_range
+from app.services.time import kathmandu_today
 
 DATA_DIR = BACKEND_DIR.parent / "frontend" / "data"
-KATHMANDU = timezone(timedelta(hours=5, minutes=45))  # Nepal has no daylight saving time
 
-TIME_RANGE = re.compile(r"^(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})$")  # "7:00-8:30"
-ROUTINE_TICK = re.compile(r"^routine-(\d{4}-\d{2}-\d{2})-([a-z0-9-]+)$")  # "routine-2026-11-18-wake"
 
 
 def to_date(value: str | None) -> date | None:
@@ -42,15 +39,6 @@ def to_date(value: str | None) -> date | None:
 
 def to_time(value: str | None) -> time | None:
     return time.fromisoformat(value) if value else None
-
-
-def parse_range(label: str | None) -> tuple[time | None, time | None]:
-    """'7:00-8:30' -> (07:00, 08:30). Free text like 'Work hour' -> (None, None)."""
-    match = TIME_RANGE.match(label or "")
-    if not match:
-        return None, None
-    h1, m1, h2, m2 = map(int, match.groups())
-    return time(h1, m1), time(h2, m2)
 
 
 def upsert(db: Session, model, key: dict, fields: dict, stats: Counter):
@@ -204,7 +192,7 @@ def print_report(stats, expected, found, skipped) -> None:
 
 def archive_json() -> None:
     """Keeps a dated copy of both files in frontend/data/archive/."""
-    today = datetime.now(KATHMANDU).date().isoformat()
+    today = kathmandu_today().isoformat()
     archive = DATA_DIR / "archive"
     archive.mkdir(exist_ok=True)
     for name in ("plan", "progress"):

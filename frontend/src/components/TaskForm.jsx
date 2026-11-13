@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { usePlanActions } from '../PlanContext'
-import { addTask, moveTask, updateTask } from '../utils/planEdit'
-import { TASK_TYPES, validatePlan } from '../utils/validatePlan'
+import { TASK_TYPES } from '../utils/validatePlan'
 import Modal from './Modal'
 
 const input = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500'
@@ -10,7 +9,7 @@ const fieldLabel = 'block text-xs font-semibold text-slate-500 uppercase mb-1'
 // The Add task / Edit task form, in a modal.
 // "form" is { mode: 'add', date } or { mode: 'edit', task, date }.
 function TaskForm({ form, onClose }) {
-  const { plan, savePlan } = usePlanActions()
+  const { editPlan } = usePlanActions()
   const editing = form.mode === 'edit'
   // One state object for all the fields; each input updates its own key.
   const [fields, setFields] = useState({
@@ -27,20 +26,13 @@ function TaskForm({ form, onClose }) {
 
   async function onSubmit(e) {
     e.preventDefault() // stop the browser from reloading the page
-    let next
-    if (editing) {
-      next = updateTask(plan, form.task.id, fields)
-      if (fields.date !== form.date) next = moveTask(next, form.task.id, fields.date)
-    } else {
-      next = addTask(plan, fields).plan
-    }
-    // Check here first for instant feedback; the server checks again before saving.
-    const problems = validatePlan(next, { quiet: true })
-    if (problems.length) return setErrors(problems)
-
+    setErrors([])
     setSaving(true)
     try {
-      await savePlan(next)
+      // The server makes the id, finds or creates the day (and its week and month),
+      // and moves the task when the date changed. It keeps the task's id either way.
+      if (editing) await editPlan(`/api/tasks/${encodeURIComponent(form.task.id)}`, { method: 'PATCH', body: fields })
+      else await editPlan('/api/tasks', { method: 'POST', body: fields })
       onClose()
     } catch (err) {
       setErrors(err.message.split('\n'))

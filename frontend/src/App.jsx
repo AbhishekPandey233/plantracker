@@ -10,14 +10,14 @@ function Message({ children }) {
   )
 }
 
-// App is the root component. It loads plan.json through the local data API,
+// App is the root component. It loads the plan from the backend,
 // then shows the main screen (Tracker) once the plan has arrived.
 function App() {
-  const { plan, error, savePlan } = usePlan()
+  const { plan, error, editPlan } = usePlan()
 
   if (error) return <Message>{`Couldn't load your plan.\n${error}`}</Message>
   if (!plan) return <Message>Loading your plan…</Message>
-  return <Tracker plan={plan} savePlan={savePlan} />
+  return <Tracker plan={plan} editPlan={editPlan} />
 }
 
 export default App

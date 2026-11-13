@@ -1,149 +1,96 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { api } from '../utils/api'
-import { mergeTicks } from '../utils/planHelpers'
+import { api, tickUrl } from '../utils/api'
 
-const STORAGE_KEY = 'planTracker:ticks' // the browser's backup copy of the ticks
-const MIGRATED_KEY = 'planTracker:migratedToFile' // set once old browser ticks are in progress.json
-const SAVE_DELAY_MS = 500
-
-// Reads the browser's copy of the ticks.
-function loadLocalTicks() {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY)) ?? {}
-  } catch {
-    return {}
-  }
-}
-
-function saveLocalTicks(ticks) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(ticks))
-  } catch {
-    // Browser storage full or blocked: progress.json still has the ticks.
-  }
-}
-
-// Custom hook: keeps track of which task ids are ticked.
-// The real copy lives in frontend/data/progress.json (through the local data API),
-// and a backup copy stays in the browser's localStorage in case the API fails.
-// Returns { isDone, toggle, saveError }.
+// Custom hook: which tasks and routine blocks are ticked, saved in the backend.
+// A tick shows at once ("optimistic"), then is sent to the server. If the server
+// refuses, the real ticks are loaded again and the problem is shown.
+// Returns { isDone, toggle, setMany, resetAll, undo, reload, toast, closeToast, saveError }.
 export function useProgress() {
-  // useState holds the ticks in memory. Start with the browser's copy so ticks
-  // show instantly, then swap in progress.json once it has loaded.
-  const [ticks, setTicks] = useState(loadLocalTicks)
+  // useState holds the ticks for rendering: { "<tick id>": true/false }.
+  const [ticks, setTicks] = useState({})
   const [saveError, setSaveError] = useState(null)
+  const [toast, setToast] = useState(null) // { message, id } or null
 
   // useRef keeps a value between renders without causing a re-render.
-  const fileLoaded = useRef(false) // never write the file before reading it, or we'd overwrite it
-  const unsaved = useRef(null) // the latest ticks still waiting to be written
-  const timer = useRef(null)
+  const latest = useRef({}) // the newest ticks, even before React has re-rendered (fast clicks)
+  const previous = useRef(null) // the ticks before the last change, for Undo
+  const queue = useRef(Promise.resolve()) // saves wait for each other, so they arrive in order
 
-  // Writes any unsaved ticks to progress.json right now.
-  const flush = useCallback((keepalive = false) => {
-    clearTimeout(timer.current)
-    const data = unsaved.current
-    if (!data || !fileLoaded.current) return Promise.resolve()
-    unsaved.current = null
-    return api('/api/progress', data, { keepalive })
-      .then(() => setSaveError(null))
-      .catch((err) => {
-        unsaved.current ??= data // keep it, so the next change or page close tries again
-        setSaveError(`Ticks are only saved in this browser for now: ${err.message}`)
-      })
+  const show = useCallback((next) => {
+    latest.current = next
+    setTicks(next)
   }, [])
 
-  // useEffect with [flush] runs once on start (flush never changes).
+  const reload = useCallback(() => api('/api/progress').then(show), [show])
+
+  // useEffect with [reload] runs once on start.
   useEffect(() => {
-    api('/api/progress')
-      .then((fileTicks) => {
-        let next = fileTicks
-        const migrated = localStorage.getItem(MIGRATED_KEY)
-        if (!migrated) {
-          // One-time move: ticks from before Build Plan 2 lived only in the browser.
-          // Merge them in (a tick on either side stays ticked). The browser copy is kept.
-          next = mergeTicks(fileTicks, loadLocalTicks())
-          unsaved.current = next
-        }
-        fileLoaded.current = true
-        setTicks(next)
-        saveLocalTicks(next)
-        if (!migrated) {
-          flush().then(() => {
-            if (!unsaved.current) localStorage.setItem(MIGRATED_KEY, 'yes') // only once the save worked
-          })
-        }
-      })
-      .catch((err) => setSaveError(`Couldn't load progress.json, showing the ticks saved in this browser: ${err.message}`))
+    reload().catch((err) => setSaveError(`Couldn't load your ticks: ${err.message}`))
+  }, [reload])
 
-    // Closing or refreshing the tab within half a second of a tick: send it now.
-    const onPageHide = () => flush(true)
-    window.addEventListener('pagehide', onPageHide)
-    return () => {
-      window.removeEventListener('pagehide', onPageHide)
-      flush()
-    }
-  }, [flush])
-
-  // Saves new ticks: to the browser now, and to the file half a second after the last change.
-  const commit = useCallback(
-    (next) => {
-      saveLocalTicks(next)
-      unsaved.current = next
-      clearTimeout(timer.current)
-      timer.current = setTimeout(flush, SAVE_DELAY_MS)
+  // Queues one save. A tick then an untick of the same task must reach the server in
+  // that order, so each request waits for the one before it.
+  const send = useCallback(
+    (request) => {
+      queue.current = queue.current.then(request).then(
+        () => setSaveError(null),
+        (err) => {
+          setSaveError(`That change wasn't saved: ${err.message}`)
+          return reload().catch(() => {}) // show what the server really has
+        },
+      )
     },
-    [flush],
+    [reload],
   )
 
-  // Every change goes through here, so it can be undone. makeNext gets the current
-  // ticks and returns the new ones; message is shown in the Undo toast.
-  const previous = useRef(null) // the ticks before the last change, for Undo
-  const [toast, setToast] = useState(null) // { message, id } or null
+  // Shows `next` straight away and sends only the ids that changed.
   const change = useCallback(
-    (makeNext, message) => {
-      setTicks((prev) => {
-        const next = makeNext(prev)
-        previous.current = prev
-        commit(next)
-        return next
-      })
-      setToast({ message, id: Date.now() }) // a new id restarts the toast's 5-second timer
+    (next, message) => {
+      const prev = latest.current
+      const changed = Object.keys({ ...prev, ...next }).filter((id) => Boolean(prev[id]) !== Boolean(next[id]))
+      if (!changed.length) return
+      previous.current = prev
+      show(next)
+      if (changed.length === 1) {
+        const [id] = changed
+        send(() => api(tickUrl(id), { method: 'PUT', body: { done: Boolean(next[id]) } }))
+      } else {
+        send(() => api('/api/ticks', { method: 'PUT', body: { ticks: Object.fromEntries(changed.map((id) => [id, Boolean(next[id])])) } }))
+      }
+      if (message) setToast({ message, id: Date.now() }) // a new id restarts the toast's 5-second timer
     },
-    [commit],
+    [send, show],
   )
 
-  // useCallback keeps these the same functions between renders (until something in
-  // their [ ] list changes), so they're safe to pass down without extra re-renders.
+  // useCallback keeps these the same functions between renders, so they're safe to
+  // pass down without extra re-renders.
   const toggle = useCallback(
-    (id) => change((prev) => ({ ...prev, [id]: !prev[id] }), ticks[id] ? 'Unticked' : 'Ticked'),
-    [change, ticks],
+    (id) => change({ ...latest.current, [id]: !latest.current[id] }, latest.current[id] ? 'Unticked' : 'Ticked'),
+    [change],
   )
 
   // Ticks (value true) or unticks (false) many ids at once, e.g. a whole day or week.
   const setMany = useCallback(
-    (ids, value, message) =>
-      change((prev) => {
-        const next = { ...prev }
-        for (const id of ids) next[id] = value
-        return next
-      }, message),
+    (ids, value, message) => change({ ...latest.current, ...Object.fromEntries(ids.map((id) => [id, value])) }, message),
     [change],
   )
 
-  const resetAll = useCallback(() => change(() => ({}), 'All progress reset'), [change])
+  const resetAll = useCallback(() => {
+    const allOff = Object.fromEntries(Object.keys(latest.current).map((id) => [id, false]))
+    change(allOff, 'All progress reset')
+  }, [change])
 
-  // Puts back the ticks from before the last change.
+  // Puts back the ticks from before the last change (no toast, so it never celebrates).
   const undo = useCallback(() => {
     const restore = previous.current
     if (!restore) return
+    change(restore)
     previous.current = null
-    setTicks(restore)
-    commit(restore)
     setToast(null)
-  }, [commit])
+  }, [change])
 
   const closeToast = useCallback(() => setToast(null), [])
   const isDone = useCallback((id) => Boolean(ticks[id]), [ticks])
 
-  return { isDone, toggle, setMany, resetAll, undo, toast, closeToast, saveError }
+  return { isDone, toggle, setMany, resetAll, undo, reload, toast, closeToast, saveError }
 }

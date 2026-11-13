@@ -1,16 +1,28 @@
+import { useState } from 'react'
 import { usePlanActions } from '../PlanContext'
 import MonthActions from './MonthActions'
 import MonthCard from './MonthCard'
+import RescheduleDialog from './RescheduleDialog'
 import StatsSection from './StatsSection'
 
-// The Months view: one card per month in plan.json, then an "Add next month" card.
+// The Months view: a Reschedule button, one card per month, then an "Add next month" card.
 // The callbacks come from Tracker.
 function MonthsView({ today, onPickDate, onOpenWeek, onAddMonth }) {
   const { plan } = usePlanActions()
+  const [rescheduling, setRescheduling] = useState(false)
 
   return (
     <div className="animate-fade-up">
-      <h1 className="text-2xl font-semibold text-slate-800 text-center mb-5">Months</h1>
+      <h1 className="text-2xl font-semibold text-slate-800 text-center mb-2">Months</h1>
+      <div className="text-center mb-5">
+        <button
+          onClick={() => setRescheduling(true)}
+          className="text-sm font-medium text-teal-600 bg-white rounded-full px-4 py-1.5 shadow-sm hover:shadow active:scale-95 transition"
+        >
+          ⇥ Reschedule
+        </button>
+      </div>
+      {rescheduling && <RescheduleDialog today={today} onClose={() => setRescheduling(false)} />}
       {plan.months.map((month, i) => (
         <MonthCard key={month.id} month={month} today={today} index={i} onPickDate={onPickDate} onOpenWeek={onOpenWeek}>
           <MonthActions month={month} />

@@ -61,6 +61,16 @@ def test_changed_json_updates_instead_of_duplicating(db):
     assert len(db.scalars(select(Task).where(Task.legacy_id == "2031-01-06-learn")).all()) == 1
 
 
+def test_api_returns_exactly_the_old_json_files(client, db):
+    """The compatibility promise: after importing, GET /api/plan and /api/progress give back
+    the same JSON as plan.json and progress.json (Phase 6 switches the frontend over)."""
+    plan = json.loads((DATA_DIR / "plan.json").read_text(encoding="utf-8"))
+    progress = json.loads((DATA_DIR / "progress.json").read_text(encoding="utf-8"))
+    import_data(db, plan, progress)
+    assert client.get("/api/plan").json() == plan
+    assert client.get("/api/progress").json() == progress
+
+
 def test_real_json_files_import_with_matching_counts(db):
     plan = json.loads((DATA_DIR / "plan.json").read_text(encoding="utf-8"))
     progress = json.loads((DATA_DIR / "progress.json").read_text(encoding="utf-8"))

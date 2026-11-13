@@ -1,31 +1,37 @@
 import { useState } from 'react'
 import { usePlanActions } from '../PlanContext'
-import { addWeek, deleteMessage, deleteMonth, taskIdsIn, updateMonth } from '../utils/planEdit'
+import { api } from '../utils/api'
+import { deleteMessage } from '../utils/planHelpers'
 import PlanDialog from './PlanDialog'
 
 const actionButton = 'text-xs font-medium text-slate-500 hover:text-teal-600 hover:bg-slate-50 rounded-full px-2 py-1 transition active:scale-95'
 
 // Edit / + Week / Delete buttons on a Months view card.
 function MonthActions({ month }) {
-  const { plan, savePlan, isDone } = usePlanActions()
-  const [dialog, setDialog] = useState(null) // 'edit', 'delete' or null
+  const { editPlan } = usePlanActions()
+  const [dialog, setDialog] = useState(null) // 'edit', or { counts } for delete, or null
   const [error, setError] = useState(null)
+  const url = `/api/months/${encodeURIComponent(month.id)}`
 
-  async function addOneWeek() {
+  // Runs an action and shows the server's message if it refuses.
+  async function attempt(action) {
     setError(null)
     try {
-      await savePlan(addWeek(plan, month.id).plan)
+      await action()
     } catch (err) {
       setError(err.message)
     }
   }
 
+  // Asks the server first how many tasks and ticks deleting would remove (dry run).
+  const askDelete = () => attempt(async () => setDialog({ counts: await api(`${url}?dry_run=true`, { method: 'DELETE' }) }))
+
   return (
     <div className="text-right shrink-0">
       <div className="flex gap-1">
         <button className={actionButton} onClick={() => setDialog('edit')}>Edit</button>
-        <button className={actionButton} onClick={addOneWeek}>+ Week</button>
-        <button className={`${actionButton} hover:text-red-600`} onClick={() => setDialog('delete')}>Delete</button>
+        <button className={actionButton} onClick={() => attempt(() => editPlan(`${url}/weeks`, { method: 'POST' }))}>+ Week</button>
+        <button className={`${actionButton} hover:text-red-600`} onClick={askDelete}>Delete</button>
       </div>
       {error && <p className="animate-fade-up text-xs text-amber-800 max-w-56 mt-1 whitespace-pre-line">{error}</p>}
 
@@ -38,17 +44,17 @@ function MonthActions({ month }) {
             { name: 'end', label: 'End date', type: 'date' },
           ]}
           initial={{ title: month.title, start: month.start, end: month.end }}
-          makePlan={(values) => updateMonth(plan, month.id, values)}
+          onSave={(values) => editPlan(url, { method: 'PATCH', body: values })}
           onClose={() => setDialog(null)}
         />
       )}
-      {dialog === 'delete' && (
+      {dialog?.counts && (
         <PlanDialog
           title={`Delete "${month.title}"?`}
-          message={deleteMessage('This month', taskIdsIn(month), isDone)}
+          message={deleteMessage('This month', dialog.counts)}
           confirmLabel="Delete month"
           danger
-          makePlan={() => deleteMonth(plan, month.id)}
+          onSave={() => editPlan(url, { method: 'DELETE' })}
           onClose={() => setDialog(null)}
         />
       )}

@@ -27,7 +27,7 @@ function Timeline({ timeline, date, now, showNow = true }) {
 
       {timeline.anytime.length > 0 && (
         <div className="ml-17 mt-2 bg-white rounded-xl shadow-sm px-4 py-3">
-          <h3 className="text-sm font-semibold text-slate-600 mb-1">Anytime today</h3>
+          <h3 className="text-sm font-semibold text-slate-600 mb-1">{showNow ? 'Anytime today' : 'Anytime'}</h3>
           {timeline.anytime.map((task) => (
             <TaskRow key={task.id} task={task} date={date} />
           ))}

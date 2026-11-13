@@ -6,6 +6,7 @@ const ICONS = {
   today: 'M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z',
   weeks: 'M4 6h16M4 12h16M4 18h16',
   months: 'M4 5h16v15H4zM4 10h16M9 3v4M15 3v4',
+  history: 'M3 12a9 9 0 1 0 3-6.7M3 4v4h4M12 7v5l3 2',
   plus: 'M12 5v14M5 12h14',
   collapse: 'M15 6l-6 6 6 6',
   expand: 'M9 6l6 6-6 6',
@@ -23,6 +24,7 @@ const NAV = [
   { view: 'today', label: 'Today', key: 'T' },
   { view: 'weeks', label: 'Weeks', key: 'W' },
   { view: 'months', label: 'Months', key: 'M' },
+  { view: 'history', label: 'History', key: 'H' },
 ]
 
 // The left side panel: app name and clock, navigation, the progress area (Phases 2-3)

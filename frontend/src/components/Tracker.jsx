@@ -7,6 +7,7 @@ import { routineTickIds } from '../utils/timeHelpers'
 import { withTransition } from '../utils/transition'
 import Confetti from './Confetti'
 import DayCard from './DayCard'
+import HistoryView from './HistoryView'
 import ImportPanel from './ImportPanel'
 import Menu from './Menu'
 import MiniCalendar from './MiniCalendar'
@@ -24,7 +25,7 @@ function weekIndexFor(weeks, date) {
   return index === -1 ? 0 : index
 }
 
-const VIEWS = ['today', 'weeks', 'months'] // left to right, for the slide direction
+const VIEWS = ['today', 'weeks', 'months', 'history'] // left to right, for the slide direction
 const COLLAPSED_KEY = 'planTracker:sidebarCollapsed'
 
 // The saved panel choice wins; with nothing saved, narrow windows start collapsed.
@@ -57,12 +58,13 @@ function isTyping(target) {
   return tag === 'INPUT' && !['checkbox', 'radio', 'button', 'submit'].includes(target.type)
 }
 
-// The main screen, shown once plan.json has loaded. "plan" and "savePlan" come from App.
-function Tracker({ plan, savePlan }) {
+// The main screen, shown once the plan has loaded. "plan" and "editPlan" come from App.
+function Tracker({ plan, editPlan: editOnServer }) {
   const now = useNow()
-  const { isDone, toggle, setMany, resetAll, undo, toast, closeToast, saveError } = useProgress()
+  const { isDone, toggle, setMany, resetAll, undo, reload: reloadTicks, toast, closeToast, saveError } = useProgress()
   // useState: values React remembers between renders.
-  const [tab, setTab] = useState('today') // 'today', 'weeks' or 'months'
+  const [tab, setTab] = useState('today') // 'today', 'weeks', 'months' or 'history'
+  const [viewDate, setViewDate] = useState(null) // the day the Today view shows: null = today
   const [collapsed, setCollapsed] = useState(loadCollapsed) // passing the function: it only runs on the first render
   const [weekIndex, setWeekIndex] = useState(null) // null = "the week that contains today"
   const [form, setForm] = useState(null) // the Add/Edit task form: null = closed
@@ -86,27 +88,43 @@ function Tracker({ plan, savePlan }) {
   const todayTasks = days.find((d) => d.date === today)?.tasks ?? []
   const todayDone = todayTasks.filter((t) => isDone(t.id)).length
 
-  // Views sit left to right (Today, Weeks, Months): moving right slides forward, left slides back.
+  // Views sit left to right (Today, Weeks, Months, History): moving right slides forward, left slides back.
+  // Opening Today always shows today (not a day picked earlier).
   function changeTab(next) {
-    if (next === tab) return // clicking the open view shouldn't animate
-    withTransition(() => setTab(next), VIEWS.indexOf(next) > VIEWS.indexOf(tab) ? 1 : -1)
+    if (next === tab && !(next === 'today' && viewDate)) return // clicking the open view shouldn't animate
+    withTransition(() => {
+      setTab(next)
+      setViewDate(null)
+    }, VIEWS.indexOf(next) >= VIEWS.indexOf(tab) ? 1 : -1)
+  }
+
+  // Shows one day in the Today view (the day detail for a past day; today itself if date is today).
+  function openDay(date) {
+    withTransition(() => {
+      setTab('today')
+      setViewDate(date === today ? null : date)
+      window.scrollTo(0, 0) // start at the "Viewing: ..." header, not wherever the last page was scrolled
+    }, 1)
   }
 
   // Opens a view (and optionally a week), then scrolls to and flashes the element
   // with id "anchor" (e.g. "day-2026-12-03" or "catch-up").
   function goTo(view, { week: nextWeek = weekIndex, anchor = null } = {}) {
-    if (view === tab && nextWeek === weekIndex) return flash(anchor) // same page: just scroll
+    if (view === tab && nextWeek === weekIndex && !viewDate) return flash(anchor) // same page: just scroll
     pendingScroll.current = anchor
     const from = view === tab ? index : VIEWS.indexOf(tab)
     const to = view === tab ? (nextWeek ?? currentIndex) : VIEWS.indexOf(view)
     withTransition(() => {
       setTab(view)
       setWeekIndex(nextWeek)
+      setViewDate(null)
     }, to >= from ? 1 : -1)
   }
 
-  // Opens the Weeks view on the week containing `date` and scrolls to that day's card.
+  // A calendar click: a past day opens its day detail (what was done, its journal);
+  // today and later days open the Weeks view on that week and scroll to the day's card.
   function goToDate(date) {
+    if (date < today) return openDay(date)
     const i = weeks.findIndex((w) => w.start <= date && date <= w.end)
     if (i !== -1) goTo('weeks', { week: i, anchor: `day-${date}` })
   }
@@ -157,7 +175,7 @@ function Tracker({ plan, savePlan }) {
     document.title = todayTasks.length ? `Plan Tracker (${todayDone}/${todayTasks.length} today)` : 'Plan Tracker'
   }, [todayDone, todayTasks.length])
 
-  // Keyboard shortcuts: ← / → week, T Today, W Weeks, M Months, [ panel, N add task.
+  // Keyboard shortcuts: ← / → week, T Today, W Weeks, M Months, H History, [ panel, N add task.
   // No dependency list: it re-subscribes after every render, so it always sees the latest state.
   useEffect(() => {
     function onKey(e) {
@@ -167,10 +185,13 @@ function Tracker({ plan, savePlan }) {
       if (key === 't') changeTab('today')
       else if (key === 'w') changeTab('weeks')
       else if (key === 'm') changeTab('months')
+      else if (key === 'h') changeTab('history')
       else if (key === '[') toggleSidebar()
       else if (key === 'n') {
         e.preventDefault() // don't type the "n" into the form that opens
-        setForm({ mode: 'add', date: tab === 'weeks' && week && !(today >= week.start && today <= week.end) ? week.start : today })
+        // The date it suggests: the day being viewed, the shown week's first day, or today.
+        const inOtherWeek = tab === 'weeks' && week && !(today >= week.start && today <= week.end)
+        setForm({ mode: 'add', date: tab === 'today' && viewDate ? viewDate : inOtherWeek ? week.start : today })
       } else if (tab === 'weeks' && key === 'arrowleft') stepWeek(-1)
       else if (tab === 'weeks' && key === 'arrowright') stepWeek(1)
     }
@@ -196,8 +217,16 @@ function Tracker({ plan, savePlan }) {
     setMany(ids, value, message)
   }
 
+  // Changes the plan on the server, then reloads the ticks too: deleting a task,
+  // week or month also deletes its ticks.
+  async function editPlan(url, options) {
+    const result = await editOnServer(url, options)
+    await reloadTicks()
+    return result
+  }
+
   // Shared with every component below through PlanContext (see PlanContext.js).
-  const actions = { plan, savePlan, isDone, toggle: toggleAndCelebrate, setMany: setManyAndCelebrate, openTaskForm: setForm }
+  const actions = { plan, editPlan, isDone, toggle: toggleAndCelebrate, setMany: setManyAndCelebrate, openTaskForm: setForm }
 
   return (
     <PlanContext.Provider value={actions}>
@@ -231,7 +260,9 @@ function Tracker({ plan, savePlan }) {
             {/* key: when the key changes, React throws the old element away and mounts
                 a new one, so the fade-in animations replay on every view/week switch. */}
             {tab === 'today' ? (
-              <TodayView key="today" days={days} now={now} />
+              <TodayView key={`today-${viewDate ?? today}`} days={days} now={now} date={viewDate ?? today} onBackToToday={() => changeTab('today')} onPickDate={openDay} />
+            ) : tab === 'history' ? (
+              <HistoryView key="history" today={today} onOpenDay={openDay} />
             ) : tab === 'months' ? (
               <MonthsView
                 key="months"
@@ -241,7 +272,7 @@ function Tracker({ plan, savePlan }) {
                 onAddMonth={() => setWizardOpen(true)}
               />
             ) : !week ? (
-              <p className="text-center text-slate-500 py-12">No weeks in plan.json yet.</p>
+              <p className="text-center text-slate-500 py-12">No weeks in the plan yet.</p>
             ) : (
               <div key={week.id}>
                 {index !== currentIndex && (
@@ -273,7 +304,7 @@ function Tracker({ plan, savePlan }) {
           </div>
 
           <p className="text-center text-xs text-slate-400 mt-10">
-            Shortcuts: <kbd>T</kbd> Today · <kbd>W</kbd> Weeks · <kbd>M</kbd> Months · <kbd>←</kbd> <kbd>→</kbd> week ·{' '}
+            Shortcuts: <kbd>T</kbd> Today · <kbd>W</kbd> Weeks · <kbd>M</kbd> Months · <kbd>H</kbd> History · <kbd>←</kbd> <kbd>→</kbd> week ·{' '}
             <kbd>N</kbd> add task · <kbd>[</kbd> panel
           </p>
         </div>

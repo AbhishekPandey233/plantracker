@@ -150,14 +150,6 @@ export function planSummary(plan, today, isDone) {
   }
 }
 
-// Combines two sets of ticks ({ "task-id": true/false }).
-// A task ticked on either side stays ticked.
-export function mergeTicks(a, b) {
-  const merged = { ...a }
-  for (const [id, done] of Object.entries(b)) merged[id] = Boolean(merged[id] || done)
-  return merged
-}
-
 // True if any group of task ids (a day's or a week's tasks) becomes fully ticked
 // when the ticks change from isDone to nextIsDone. Used for the confetti.
 export function newlyCompleted(groups, isDone, nextIsDone) {
@@ -173,4 +165,24 @@ export function tasksByType(plan, isDone) {
     if (isDone(task.id)) result[task.type].done++
   }
   return result
+}
+
+// The delete confirmation text, from the server's dry-run counts { tasks, ticks }.
+export function deleteMessage(name, { tasks, ticks }) {
+  const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`
+  return `${name} has ${plural(tasks, 'task')} and ${plural(ticks, 'tick')}. Deleting removes the tasks and their ticks for good.`
+}
+
+// History view filters. "days" come from GET /api/history (each has status and hasJournal).
+export const HISTORY_FILTERS = { all: 'All', complete: 'Completed', partial: 'Partial', missed: 'Missed', journal: 'Has journal' }
+
+export function filterHistory(days, filter) {
+  if (filter === 'journal') return days.filter((d) => d.hasJournal)
+  if (filter === 'all') return days
+  return days.filter((d) => d.status === filter)
+}
+
+// The Reschedule tool's default "from" date: the earliest day with tasks that aren't all ticked.
+export function firstUnfinishedDay(days, isDone) {
+  return planDays(days).find((d) => !isComplete(d, isDone))?.date ?? null
 }
