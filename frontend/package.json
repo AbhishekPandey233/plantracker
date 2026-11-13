@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
+    "validate": "node scripts/validate.js",
     "preview": "vite preview"
   },
   "dependencies": {

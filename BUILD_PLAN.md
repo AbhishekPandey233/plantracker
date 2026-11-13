@@ -190,8 +190,8 @@ For these, follow `CLAUDE.md`: only edit `plan.json`, never change existing task
 ## Progress
 
 - [x] Phase 1: Create the project
-- [ ] Phase 2: Data file, CLAUDE.md and validator
-- [ ] Phase 3: Load Month 1
+- [x] Phase 2: Data file, CLAUDE.md and validator
+- [x] Phase 3: Load Month 1
 - [ ] Phase 4: Tickable week view
 - [ ] Phase 5: Today view and progress
 - [ ] Phase 6: Design polish

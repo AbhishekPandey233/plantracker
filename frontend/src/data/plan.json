@@ -1,0 +1,647 @@
+{
+  "months": [
+    {
+      "id": "m1",
+      "title": "Month 1: Interview essentials",
+      "start": "2026-11-18",
+      "end": "2026-12-20",
+      "weeks": [
+        {
+          "id": "m1-w1",
+          "title": "Week 1: Setup, Git, Python core",
+          "start": "2026-11-18",
+          "end": "2026-11-22",
+          "goal": "By Sunday your laptop is ready for development and your first Python project is on GitHub.",
+          "days": [
+            {
+              "date": "2026-11-18",
+              "focus": "Tools setup",
+              "tasks": [
+                {
+                  "id": "2026-11-18-learn",
+                  "type": "learn",
+                  "time": "7:00-8:30",
+                  "text": "Install VS Code, Python 3.12 (tick \"Add to PATH\"), Git for Windows, Windows Terminal; create a GitHub account; set Git name and email; add an SSH key",
+                  "resources": "Git official docs; GitHub Docs"
+                },
+                {
+                  "id": "2026-11-18-practise",
+                  "type": "practise",
+                  "time": "Work hour",
+                  "text": "Git basics: init, add, commit, push; create the learning-journey repo",
+                  "resources": ""
+                }
+              ]
+            },
+            {
+              "date": "2026-11-19",
+              "focus": "WSL + Git branching",
+              "tasks": [
+                {
+                  "id": "2026-11-19-learn",
+                  "type": "learn",
+                  "time": "7:00-8:30",
+                  "text": "Install WSL2 with wsl --install; branches, merge, merge conflicts, pull requests on your own repo",
+                  "resources": "learngitbranching.js.org"
+                },
+                {
+                  "id": "2026-11-19-practise",
+                  "type": "practise",
+                  "time": "Work hour",
+                  "text": "First levels of Learn Git Branching",
+                  "resources": ""
+                }
+              ]
+            },
+            {
+              "date": "2026-11-20",
+              "focus": "Python core",
+              "tasks": [
+                {
+                  "id": "2026-11-20-learn",
+                  "type": "learn",
+                  "time": "7:00-8:30",
+                  "text": "Strings, lists, tuples, dicts, sets; functions, default and keyword arguments; list and dict comprehensions",
+                  "resources": "Official Python tutorial; Exercism; HackerRank"
+                },
+                {
+                  "id": "2026-11-20-practise",
+                  "type": "practise",
+                  "time": "Work hour",
+                  "text": "5 Python exercises",
+                  "resources": ""
+                }
+              ]
+            },
+            {
+              "date": "2026-11-21",
+              "focus": "Python + mini-project",
+              "tasks": [
+                {
+                  "id": "2026-11-21-project",
+                  "type": "project",
+                  "time": "3 hrs",
+                  "text": "Error handling (try/except), reading and writing files, modules, virtual environments and pip. Then build a command-line program that reads a CSV of stock prices and prints averages, highs and lows",
+                  "resources": "Python csv module docs"
+                }
+              ]
+            },
+            {
+              "date": "2026-11-22",
+              "focus": "Review",
+              "tasks": [
+                {
+                  "id": "2026-11-22-review",
+                  "type": "review",
+                  "time": "",
+                  "text": "Catch up on anything unfinished; rewrite notes in your own words",
+                  "resources": "Your notes.md"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "m1-w2",
+          "title": "Week 2: OOP and data structures",
+          "start": "2026-11-23",
+          "end": "2026-11-29",
+          "goal": "By Sunday you can explain the four OOP pillars and solve basic LeetCode easy problems.",
+          "days": [
+            {
+              "date": "2026-11-23",
+              "focus": "Classes and objects",
+              "tasks": [
+                {
+                  "id": "2026-11-23-learn",
+                  "type": "learn",
+                  "time": "7:00-8:30",
+                  "text": "Classes, objects, __init__, self, instance vs class attributes, methods",
+                  "resources": "Official Python tutorial (Classes); LeetCode"
+                },
+                {
+                  "id": "2026-11-23-practise",
+                  "type": "practise",
+                  "time": "Work hour",
+                  "text": "1 LeetCode easy: arrays",
+                  "resources": ""
+                }
+              ]
+            },
+            {
+              "date": "2026-11-24",
+              "focus": "OOP pillars",
+              "tasks": [
+                {
+                  "id": "2026-11-24-learn",
+                  "type": "learn",
+                  "time": "7:00-8:30",
+                  "text": "Encapsulation, inheritance, polymorphism, abstraction; write your own example of each",
+                  "resources": "LeetCode"
+                },
+                {
+                  "id": "2026-11-24-practise",
+                  "type": "practise",
+                  "time": "Work hour",
+                  "text": "1 LeetCode easy: strings",
+                  "resources": ""
+                }
+              ]
+            },
+            {
+              "date": "2026-11-25",
+              "focus": "Advanced Python OOP",
+              "tasks": [
+                {
+                  "id": "2026-11-25-learn",
+                  "type": "learn",
+                  "time": "7:00-8:30",
+                  "text": "Special methods (__str__, __eq__, __len__), dataclasses, custom exceptions",
+                  "resources": "Python dataclasses docs"
+                },
+                {
+                  "id": "2026-11-25-practise",
+                  "type": "practise",
+                  "time": "Work hour",
+                  "text": "1 LeetCode easy: hash maps",
+                  "resources": ""
+                }
+              ]
+            },
+            {
+              "date": "2026-11-26",
+              "focus": "Complexity + structures",
+              "tasks": [
+                {
+                  "id": "2026-11-26-learn",
+                  "type": "learn",
+                  "time": "7:00-8:30",
+                  "text": "Big-O notation; when to use a list, dict or set; stacks and queues",
+                  "resources": "LeetCode"
+                },
+                {
+                  "id": "2026-11-26-practise",
+                  "type": "practise",
+                  "time": "Work hour",
+                  "text": "1 LeetCode easy: stacks",
+                  "resources": ""
+                }
+              ]
+            },
+            {
+              "date": "2026-11-27",
+              "focus": "Algorithms basics",
+              "tasks": [
+                {
+                  "id": "2026-11-27-learn",
+                  "type": "learn",
+                  "time": "7:00-8:30",
+                  "text": "Recursion, built-in sorting, binary search",
+                  "resources": "LeetCode"
+                },
+                {
+                  "id": "2026-11-27-practise",
+                  "type": "practise",
+                  "time": "Work hour",
+                  "text": "1 LeetCode easy: binary search",
+                  "resources": ""
+                }
+              ]
+            },
+            {
+              "date": "2026-11-28",
+              "focus": "Mini-project",
+              "tasks": [
+                {
+                  "id": "2026-11-28-project",
+                  "type": "project",
+                  "time": "3 hrs",
+                  "text": "Rebuild the Week 1 program using classes; fetch data from a public API with requests; save results as JSON; write a README",
+                  "resources": "requests docs"
+                }
+              ]
+            },
+            {
+              "date": "2026-11-29",
+              "focus": "Review",
+              "tasks": [
+                {
+                  "id": "2026-11-29-review",
+                  "type": "review",
+                  "time": "",
+                  "text": "Explain the four OOP pillars out loud without notes; catch up",
+                  "resources": "Your notes.md"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "m1-w3",
+          "title": "Week 3: SQL and database theory",
+          "start": "2026-11-30",
+          "end": "2026-12-06",
+          "goal": "By Sunday you can design a small database and write common interview queries.",
+          "days": [
+            {
+              "date": "2026-11-30",
+              "focus": "SQL basics",
+              "tasks": [
+                {
+                  "id": "2026-11-30-learn",
+                  "type": "learn",
+                  "time": "7:00-8:30",
+                  "text": "Install PostgreSQL for Windows (with pgAdmin); CREATE TABLE, data types, SELECT, WHERE, ORDER BY, INSERT, UPDATE, DELETE",
+                  "resources": "SQLBolt; PostgreSQL docs"
+                },
+                {
+                  "id": "2026-11-30-practise",
+                  "type": "practise",
+                  "time": "Work hour",
+                  "text": "SQLBolt lessons 1–6",
+                  "resources": ""
+                }
+              ]
+            },
+            {
+              "date": "2026-12-01",
+              "focus": "Aggregates",
+              "tasks": [
+                {
+                  "id": "2026-12-01-learn",
+                  "type": "learn",
+                  "time": "7:00-8:30",
+                  "text": "COUNT, SUM, AVG, MIN, MAX, GROUP BY, HAVING",
+                  "resources": "SQLBolt; pgexercises.com"
+                },
+                {
+                  "id": "2026-12-01-practise",
+                  "type": "practise",
+                  "time": "Work hour",
+                  "text": "SQLBolt aggregate lessons; pgexercises",
+                  "resources": ""
+                }
+              ]
+            },
+            {
+              "date": "2026-12-02",
+              "focus": "Keys and joins",
+              "tasks": [
+                {
+                  "id": "2026-12-02-learn",
+                  "type": "learn",
+                  "time": "7:00-8:30",
+                  "text": "Primary and foreign keys; INNER JOIN, LEFT JOIN, self join",
+                  "resources": "pgexercises.com"
+                },
+                {
+                  "id": "2026-12-02-practise",
+                  "type": "practise",
+                  "time": "Work hour",
+                  "text": "Join exercises",
+                  "resources": ""
+                }
+              ]
+            },
+            {
+              "date": "2026-12-03",
+              "focus": "Database theory",
+              "tasks": [
+                {
+                  "id": "2026-12-03-learn",
+                  "type": "learn",
+                  "time": "7:00-8:30",
+                  "text": "Normalisation (1NF, 2NF, 3NF), transactions, ACID, indexes and when to use them",
+                  "resources": "LeetCode"
+                },
+                {
+                  "id": "2026-12-03-practise",
+                  "type": "practise",
+                  "time": "Work hour",
+                  "text": "1 LeetCode easy",
+                  "resources": ""
+                }
+              ]
+            },
+            {
+              "date": "2026-12-04",
+              "focus": "Subqueries + Python",
+              "tasks": [
+                {
+                  "id": "2026-12-04-learn",
+                  "type": "learn",
+                  "time": "7:00-8:30",
+                  "text": "Subqueries; connecting Python to PostgreSQL with psycopg",
+                  "resources": "LeetCode Database problems"
+                },
+                {
+                  "id": "2026-12-04-practise",
+                  "type": "practise",
+                  "time": "Work hour",
+                  "text": "Classic interview queries: second-highest salary, finding duplicates",
+                  "resources": ""
+                }
+              ]
+            },
+            {
+              "date": "2026-12-05",
+              "focus": "Mini-project",
+              "tasks": [
+                {
+                  "id": "2026-12-05-project",
+                  "type": "project",
+                  "time": "3 hrs",
+                  "text": "A stock database with companies and daily_prices tables; load a CSV; write 10 useful queries",
+                  "resources": "PostgreSQL COPY docs"
+                }
+              ]
+            },
+            {
+              "date": "2026-12-06",
+              "focus": "Review",
+              "tasks": [
+                {
+                  "id": "2026-12-06-review",
+                  "type": "review",
+                  "time": "",
+                  "text": "Explain normalisation and ACID out loud; catch up",
+                  "resources": "Your notes.md"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "m1-w4",
+          "title": "Week 4: REST APIs and Linux",
+          "start": "2026-12-07",
+          "end": "2026-12-13",
+          "goal": "By Sunday you can build a CRUD API with login and a database, the usual junior take-home task.",
+          "days": [
+            {
+              "date": "2026-12-07",
+              "focus": "How the web works",
+              "tasks": [
+                {
+                  "id": "2026-12-07-learn",
+                  "type": "learn",
+                  "time": "7:00-8:30",
+                  "text": "HTTP methods, status codes, headers, REST principles, JSON; watch requests in the browser's DevTools Network tab",
+                  "resources": "MDN Web Docs (HTTP)"
+                },
+                {
+                  "id": "2026-12-07-practise",
+                  "type": "practise",
+                  "time": "Work hour",
+                  "text": "Call public APIs with curl or Postman",
+                  "resources": ""
+                }
+              ]
+            },
+            {
+              "date": "2026-12-08",
+              "focus": "FastAPI basics",
+              "tasks": [
+                {
+                  "id": "2026-12-08-learn",
+                  "type": "learn",
+                  "time": "7:00-8:30",
+                  "text": "Install FastAPI and Uvicorn; routes, path and query parameters, Pydantic models, the auto-generated /docs page",
+                  "resources": "FastAPI official tutorial"
+                },
+                {
+                  "id": "2026-12-08-practise",
+                  "type": "practise",
+                  "time": "Work hour",
+                  "text": "1 LeetCode easy",
+                  "resources": ""
+                }
+              ]
+            },
+            {
+              "date": "2026-12-09",
+              "focus": "FastAPI + database",
+              "tasks": [
+                {
+                  "id": "2026-12-09-learn",
+                  "type": "learn",
+                  "time": "7:00-8:30",
+                  "text": "Connect to PostgreSQL with SQLAlchemy; create, read, update, delete endpoints",
+                  "resources": "FastAPI docs (SQL databases)"
+                },
+                {
+                  "id": "2026-12-09-practise",
+                  "type": "practise",
+                  "time": "Work hour",
+                  "text": "1 LeetCode easy",
+                  "resources": ""
+                }
+              ]
+            },
+            {
+              "date": "2026-12-10",
+              "focus": "Auth + validation",
+              "tasks": [
+                {
+                  "id": "2026-12-10-learn",
+                  "type": "learn",
+                  "time": "7:00-8:30",
+                  "text": "Password hashing, JWT login, input validation, error responses",
+                  "resources": "FastAPI docs (Security)"
+                },
+                {
+                  "id": "2026-12-10-practise",
+                  "type": "practise",
+                  "time": "Work hour",
+                  "text": "1 LeetCode easy",
+                  "resources": ""
+                }
+              ]
+            },
+            {
+              "date": "2026-12-11",
+              "focus": "Linux essentials",
+              "tasks": [
+                {
+                  "id": "2026-12-11-learn",
+                  "type": "learn",
+                  "time": "7:00-8:30",
+                  "text": "In WSL: navigating, files, permissions with chmod, grep, pipes, processes, apt",
+                  "resources": "Ubuntu command-line tutorial"
+                },
+                {
+                  "id": "2026-12-11-practise",
+                  "type": "practise",
+                  "time": "Work hour",
+                  "text": "1 LeetCode easy",
+                  "resources": ""
+                }
+              ]
+            },
+            {
+              "date": "2026-12-12",
+              "focus": "Take-home practice",
+              "tasks": [
+                {
+                  "id": "2026-12-12-project",
+                  "type": "project",
+                  "time": "3 hrs",
+                  "text": "A stock watchlist REST API with login, CRUD and PostgreSQL; README listing the endpoints",
+                  "resources": "FastAPI docs"
+                }
+              ]
+            },
+            {
+              "date": "2026-12-13",
+              "focus": "Review",
+              "tasks": [
+                {
+                  "id": "2026-12-13-review",
+                  "type": "review",
+                  "time": "",
+                  "text": "Catch up; tidy the API code and README",
+                  "resources": "Your notes.md"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "m1-w5",
+          "title": "Week 5: Interview sprint",
+          "start": "2026-12-14",
+          "end": "2026-12-20",
+          "goal": "By Sunday you can answer common theory questions, have a CV ready, and have done one mock interview.",
+          "days": [
+            {
+              "date": "2026-12-14",
+              "focus": "Operating systems",
+              "tasks": [
+                {
+                  "id": "2026-12-14-learn",
+                  "type": "learn",
+                  "time": "7:00-8:30",
+                  "text": "Process vs thread, deadlock and its conditions, memory and paging basics, CPU scheduling",
+                  "resources": "GeeksforGeeks OS interview questions"
+                },
+                {
+                  "id": "2026-12-14-practise",
+                  "type": "practise",
+                  "time": "Work hour",
+                  "text": "1 LeetCode easy",
+                  "resources": ""
+                }
+              ]
+            },
+            {
+              "date": "2026-12-15",
+              "focus": "Networking",
+              "tasks": [
+                {
+                  "id": "2026-12-15-learn",
+                  "type": "learn",
+                  "time": "7:00-8:30",
+                  "text": "TCP vs UDP, IP and DNS, HTTP vs HTTPS, what happens when you type a URL",
+                  "resources": "MDN Web Docs"
+                },
+                {
+                  "id": "2026-12-15-practise",
+                  "type": "practise",
+                  "time": "Work hour",
+                  "text": "1 LeetCode easy",
+                  "resources": ""
+                }
+              ]
+            },
+            {
+              "date": "2026-12-16",
+              "focus": "JavaScript basics",
+              "tasks": [
+                {
+                  "id": "2026-12-16-learn",
+                  "type": "learn",
+                  "time": "7:00-8:30",
+                  "text": "let/const/var, == vs ===, arrow functions, promises, async/await",
+                  "resources": "MDN JavaScript Guide"
+                },
+                {
+                  "id": "2026-12-16-practise",
+                  "type": "practise",
+                  "time": "Work hour",
+                  "text": "1 LeetCode easy",
+                  "resources": ""
+                }
+              ]
+            },
+            {
+              "date": "2026-12-17",
+              "focus": "CV and profiles",
+              "tasks": [
+                {
+                  "id": "2026-12-17-learn",
+                  "type": "learn",
+                  "time": "7:00-8:30",
+                  "text": "One-page CV, LinkedIn profile, GitHub profile README, pin your best repos",
+                  "resources": "GitHub Docs (profile README)"
+                },
+                {
+                  "id": "2026-12-17-practise",
+                  "type": "practise",
+                  "time": "Work hour",
+                  "text": "1 LeetCode easy",
+                  "resources": ""
+                }
+              ]
+            },
+            {
+              "date": "2026-12-18",
+              "focus": "Interview answers",
+              "tasks": [
+                {
+                  "id": "2026-12-18-learn",
+                  "type": "learn",
+                  "time": "7:00-8:30",
+                  "text": "Prepare: tell me about yourself, a 2-minute NEPSE thesis pitch, your KIRDARC work, why this company",
+                  "resources": "Your notes.md"
+                },
+                {
+                  "id": "2026-12-18-practise",
+                  "type": "practise",
+                  "time": "Work hour",
+                  "text": "1 LeetCode easy",
+                  "resources": ""
+                }
+              ]
+            },
+            {
+              "date": "2026-12-19",
+              "focus": "Mock interview",
+              "tasks": [
+                {
+                  "id": "2026-12-19-project",
+                  "type": "project",
+                  "time": "3 hrs",
+                  "text": "30 minutes technical and 15 minutes HR with a friend, then a timed 2-hour take-home: a small CRUD API",
+                  "resources": "Your Week 4 API as reference"
+                }
+              ]
+            },
+            {
+              "date": "2026-12-20",
+              "focus": "Month review",
+              "tasks": [
+                {
+                  "id": "2026-12-20-review",
+                  "type": "review",
+                  "time": "",
+                  "text": "Go through the interview-ready check in the 6-month schedule; list weak spots for Month 2",
+                  "resources": "6-month schedule doc"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
