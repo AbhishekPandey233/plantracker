@@ -22,9 +22,9 @@ function TodayView({ days, isDone, onToggle }) {
   const monthTasks = targetDay.month.weeks.flatMap((w) => w.days.flatMap((d) => d.tasks))
 
   return (
-    <div>
+    <div className="animate-fade-up">
       {streak > 0 && (
-        <p className="text-center mb-4 text-amber-600 dark:text-amber-400 font-semibold">
+        <p className="animate-pop text-center mb-4 text-amber-600 dark:text-amber-400 font-semibold">
           {streak} day streak
         </p>
       )}

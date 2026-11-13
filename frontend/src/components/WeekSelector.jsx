@@ -6,7 +6,7 @@ function WeekSelector({ week, onPrev, onNext, hasPrev, hasNext }) {
       <button
         onClick={onPrev}
         disabled={!hasPrev}
-        className="px-3 py-2 rounded text-teal-600 dark:text-teal-400 font-medium disabled:text-slate-300 dark:disabled:text-slate-600 disabled:cursor-not-allowed hover:bg-teal-50 dark:hover:bg-slate-700"
+        className="px-3 py-2 rounded text-teal-600 dark:text-teal-400 font-medium transition-[background-color,transform] duration-150 active:scale-95 disabled:active:scale-100 disabled:text-slate-300 dark:disabled:text-slate-600 disabled:cursor-not-allowed hover:bg-teal-50 dark:hover:bg-slate-700"
       >
         ← Prev
       </button>
@@ -17,7 +17,7 @@ function WeekSelector({ week, onPrev, onNext, hasPrev, hasNext }) {
       <button
         onClick={onNext}
         disabled={!hasNext}
-        className="px-3 py-2 rounded text-teal-600 dark:text-teal-400 font-medium disabled:text-slate-300 dark:disabled:text-slate-600 disabled:cursor-not-allowed hover:bg-teal-50 dark:hover:bg-slate-700"
+        className="px-3 py-2 rounded text-teal-600 dark:text-teal-400 font-medium transition-[background-color,transform] duration-150 active:scale-95 disabled:active:scale-100 disabled:text-slate-300 dark:disabled:text-slate-600 disabled:cursor-not-allowed hover:bg-teal-50 dark:hover:bg-slate-700"
       >
         Next →
       </button>

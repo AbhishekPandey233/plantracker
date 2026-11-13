@@ -16,15 +16,17 @@ function TaskRow({ task, done, onToggle, large = false }) {
 
   return (
     <label
-      className={`flex items-start gap-3 ${large ? 'py-3' : 'py-2'} pl-3 border-l-4 ${style.border} ${done ? 'opacity-50' : ''}`}
+      className={`flex items-start gap-3 ${large ? 'py-3' : 'py-2'} pl-3 border-l-4 ${style.border} cursor-pointer rounded-r-lg transition-[opacity,background-color] duration-200 hover:bg-slate-50 ${done ? 'opacity-50' : ''}`}
     >
       <input
         type="checkbox"
         checked={done}
         // onChange fires when the checkbox is clicked; we tell App which task id changed.
         onChange={() => onToggle(task.id)}
-        className={`mt-1 accent-teal-600 dark:accent-teal-400 ${large ? 'h-6 w-6' : 'h-5 w-5'}`}
+        className={`mt-1 accent-teal-600 dark:accent-teal-400 cursor-pointer transition-transform duration-150 active:scale-75 ${large ? 'h-6 w-6' : 'h-5 w-5'}`}
       />
+      {/* ponytail: plain line-through; fading text-decoration-color was unreliable in Chrome.
+          The row's opacity fade (on the label above) is the "done" animation. */}
       <div className={done ? 'line-through' : ''}>
         <span className={`text-xs font-semibold uppercase ${style.text}`}>
           {task.type}

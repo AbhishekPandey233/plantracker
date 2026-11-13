@@ -1,0 +1,9 @@
+# Tells Netlify how to build the site, so you don't type it into the dashboard.
+# The app lives in frontend/, not the repo root.
+[build]
+  base = "frontend"          # run commands inside frontend/
+  command = "npm run build"  # Vite builds the site into frontend/dist
+  publish = "dist"           # the folder Netlify serves (relative to base)
+
+[build.environment]
+  NODE_VERSION = "24"        # same Node as the laptop; Vite 8 needs 20.19+ or 22.12+

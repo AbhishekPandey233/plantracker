@@ -8,3 +8,11 @@ Thumbs.db
 # Secrets - nothing uses these today, but never commit them if added later
 .env
 .env.*
+
+# AI coding tool files (downloaded skills, local Claude settings) - only needed on this laptop
+.claude/
+.agents/
+skills-lock.json
+
+# Netlify CLI's local folder, if you ever use it
+.netlify/

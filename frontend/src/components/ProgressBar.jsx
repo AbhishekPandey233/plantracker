@@ -9,8 +9,13 @@ function ProgressBar({ label, done, total }) {
         <span>{label}</span>
         <span>{done}/{total}</span>
       </div>
-      <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-        <div className="bg-teal-600 dark:bg-teal-400 h-2 rounded-full" style={{ width: `${pct}%` }} />
+      {/* The fill is always full width and shrunk with scaleX, so it slides smoothly
+          when a task is ticked (scale animates smoother than width). */}
+      <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
+        <div
+          className="bg-teal-600 dark:bg-teal-400 h-2 rounded-full origin-left transition-transform duration-500 ease-out"
+          style={{ transform: `scaleX(${pct / 100})` }}
+        />
       </div>
     </div>
   )
