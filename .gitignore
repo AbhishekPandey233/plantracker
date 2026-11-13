@@ -13,3 +13,10 @@ Thumbs.db
 .claude/
 .agents/
 skills-lock.json
+
+# All markdown files (README, CLAUDE.md, build plans, notes) - kept on this laptop only
+*.md
+
+# Local data API leftovers: backups of the previous version and half-finished writes
+frontend/data/*.backup.json
+frontend/data/*.tmp

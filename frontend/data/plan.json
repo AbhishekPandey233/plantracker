@@ -643,5 +643,235 @@
         }
       ]
     }
-  ]
+  ],
+  "routine": {
+    "weekday": [
+      {
+        "id": "wake",
+        "start": "06:30",
+        "label": "Wake up",
+        "kind": "wake",
+        "tickable": true
+      },
+      {
+        "id": "freshen",
+        "start": "06:45",
+        "end": "07:00",
+        "label": "Freshen up",
+        "kind": "rest",
+        "tickable": false
+      },
+      {
+        "id": "coding-morning",
+        "start": "07:00",
+        "end": "08:30",
+        "label": "Coding: learn",
+        "kind": "coding",
+        "taskType": "learn",
+        "tickable": true
+      },
+      {
+        "id": "breakfast",
+        "start": "08:30",
+        "end": "09:10",
+        "label": "Breakfast, get ready",
+        "kind": "meal",
+        "tickable": false
+      },
+      {
+        "id": "french-commute-am",
+        "start": "09:10",
+        "end": "10:00",
+        "label": "French listening (commute)",
+        "kind": "french",
+        "tickable": true
+      },
+      {
+        "id": "work",
+        "start": "10:00",
+        "end": "17:00",
+        "label": "Work (free hour: coding practice)",
+        "kind": "work",
+        "taskType": "practise",
+        "tickable": false
+      },
+      {
+        "id": "french-commute-pm",
+        "start": "17:00",
+        "end": "18:00",
+        "label": "French review (commute)",
+        "kind": "french",
+        "tickable": true
+      },
+      {
+        "id": "rest-dinner",
+        "start": "18:00",
+        "end": "19:30",
+        "label": "Rest, dinner, family",
+        "kind": "meal",
+        "tickable": false
+      },
+      {
+        "id": "french-evening",
+        "start": "19:30",
+        "end": "20:15",
+        "label": "French focused study",
+        "kind": "french",
+        "tickable": true
+      },
+      {
+        "id": "fun",
+        "start": "20:15",
+        "end": "22:00",
+        "label": "Entertainment",
+        "kind": "fun",
+        "tickable": false
+      },
+      {
+        "id": "wind-down",
+        "start": "22:00",
+        "end": "22:30",
+        "label": "Wind down, no screens",
+        "kind": "rest",
+        "tickable": true
+      },
+      {
+        "id": "sleep",
+        "start": "22:30",
+        "label": "Sleep",
+        "kind": "sleep",
+        "tickable": true
+      }
+    ],
+    "saturday": [
+      {
+        "id": "wake",
+        "start": "07:30",
+        "label": "Wake up",
+        "kind": "wake",
+        "tickable": true
+      },
+      {
+        "id": "breakfast",
+        "start": "07:30",
+        "end": "09:00",
+        "label": "Freshen up, breakfast",
+        "kind": "meal",
+        "tickable": false
+      },
+      {
+        "id": "coding-project",
+        "start": "09:00",
+        "end": "12:00",
+        "label": "Coding: mini-project",
+        "kind": "coding",
+        "taskType": "project",
+        "tickable": true
+      },
+      {
+        "id": "lunch",
+        "start": "12:00",
+        "end": "13:00",
+        "label": "Lunch",
+        "kind": "meal",
+        "tickable": false
+      },
+      {
+        "id": "french-weekend",
+        "start": "13:00",
+        "end": "14:00",
+        "label": "French: speaking and writing",
+        "kind": "french",
+        "tickable": true
+      },
+      {
+        "id": "fun",
+        "start": "14:00",
+        "end": "22:30",
+        "label": "Entertainment and free time",
+        "kind": "fun",
+        "tickable": false
+      },
+      {
+        "id": "wind-down",
+        "start": "22:30",
+        "end": "23:00",
+        "label": "Wind down",
+        "kind": "rest",
+        "tickable": true
+      },
+      {
+        "id": "sleep",
+        "start": "23:00",
+        "label": "Sleep",
+        "kind": "sleep",
+        "tickable": true
+      }
+    ],
+    "sunday": [
+      {
+        "id": "wake",
+        "start": "07:30",
+        "label": "Wake up",
+        "kind": "wake",
+        "tickable": true
+      },
+      {
+        "id": "breakfast",
+        "start": "07:30",
+        "end": "09:00",
+        "label": "Freshen up, breakfast",
+        "kind": "meal",
+        "tickable": false
+      },
+      {
+        "id": "coding-review",
+        "start": "09:00",
+        "end": "10:30",
+        "label": "Coding: catch-up and review",
+        "kind": "coding",
+        "taskType": "review",
+        "tickable": true
+      },
+      {
+        "id": "french-weekend",
+        "start": "11:00",
+        "end": "12:00",
+        "label": "French: review and speaking",
+        "kind": "french",
+        "tickable": true
+      },
+      {
+        "id": "fun",
+        "start": "12:00",
+        "end": "21:30",
+        "label": "Entertainment and free time",
+        "kind": "fun",
+        "tickable": false
+      },
+      {
+        "id": "plan-week",
+        "start": "21:30",
+        "end": "22:00",
+        "label": "Plan next week",
+        "kind": "rest",
+        "tickable": true
+      },
+      {
+        "id": "wind-down",
+        "start": "22:00",
+        "end": "22:30",
+        "label": "Wind down, no screens",
+        "kind": "rest",
+        "tickable": true
+      },
+      {
+        "id": "sleep",
+        "start": "22:30",
+        "label": "Sleep",
+        "kind": "sleep",
+        "tickable": true
+      }
+    ]
+  }
 }
