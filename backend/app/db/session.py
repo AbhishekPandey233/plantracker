@@ -6,7 +6,8 @@ from app.core.config import settings
 # The engine holds a pool of open connections to PostgreSQL (as plan_app).
 # It connects lazily: nothing happens until the first query.
 # pool_pre_ping checks a connection still works before using it (e.g. after a PostgreSQL restart).
-engine = create_engine(settings.database_url("plan_app"), pool_pre_ping=True)
+# hide_parameters keeps values (like journal text) out of error messages and the log.
+engine = create_engine(settings.database_url("plan_app"), pool_pre_ping=True, hide_parameters=True)
 
 # A session is one "conversation" with the database: queries and changes collected
 # into a transaction, which is saved with commit() or thrown away with rollback().

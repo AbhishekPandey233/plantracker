@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=BACKEND_DIR / ".env", extra="ignore")
 
     enable_docs: bool = False  # /docs page; switch on in .env while developing
+    api_key: SecretStr  # every request except /api/health must send it as X-API-Key
     log_file: Path = BACKEND_DIR / "logs" / "app.log"
 
     db_host: str = "localhost"
