@@ -192,8 +192,8 @@ For these, follow `CLAUDE.md`: only edit `plan.json`, never change existing task
 - [x] Phase 1: Create the project
 - [x] Phase 2: Data file, CLAUDE.md and validator
 - [x] Phase 3: Load Month 1
-- [ ] Phase 4: Tickable week view
+- [x] Phase 4: Tickable week view
 - [x] Phase 5: Today view and progress
 - [x] Phase 6: Design polish
 - [ ] Phase 7: Settings, backup and moving ticks between devices
-- [ ] Phase 8: Use it on my iPhone
+- [ ] ~~Phase 8: Use it on my iPhone~~ (dropped: Abhishek decided not to use it on iPhone)
