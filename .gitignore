@@ -8,6 +8,13 @@ Thumbs.db
 # Secrets - nothing uses these today, but never commit them if added later
 .env
 .env.*
+!.env.example
+
+# Backend: virtual environment, logs, Python caches
+backend/.venv/
+backend/logs/
+__pycache__/
+.pytest_cache/
 
 # AI coding tool files (downloaded skills, local Claude settings) - only needed on this laptop
 .claude/

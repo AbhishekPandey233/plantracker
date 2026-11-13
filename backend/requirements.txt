@@ -1,0 +1,13 @@
+# Exact versions so every install gets the same code. Install with:
+#   .\.venv\Scripts\python.exe -m pip install -r requirements.txt
+fastapi==0.162.5
+uvicorn==0.54.0
+SQLAlchemy==2.1.8
+psycopg[binary]==3.3.9
+alembic==1.20.1
+pydantic-settings==2.16.3
+
+# Dev only: tests and the security audit
+pytest==9.2.0
+httpx==0.28.1
+pip-audit==2.10.1
