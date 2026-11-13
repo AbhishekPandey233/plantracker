@@ -3,9 +3,11 @@ a test that takes an argument called `client` gets the value made below."""
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.security import write_limiter
+from app.db.session import engine
 from app.main import app
 
 # 127.0.0.1, because TrustedHostMiddleware refuses TestClient's default host "testserver".
@@ -23,6 +25,23 @@ def client():
 def anon():
     """Calls the app without the API key."""
     return TestClient(app, base_url=BASE_URL)
+
+
+@pytest.fixture
+def db():
+    """A database session whose changes are ALWAYS thrown away after the test.
+
+    Tests run against the real plan_tracker database, so: open a transaction, let the
+    test work inside it (commit() inside the test only releases a savepoint), and roll
+    the whole thing back at the end. The real data is never changed."""
+    with engine.connect() as conn:
+        outer = conn.begin()
+        session = Session(bind=conn, join_transaction_mode="create_savepoint")
+        try:
+            yield session
+        finally:
+            session.close()
+            outer.rollback()
 
 
 @pytest.fixture(autouse=True)
