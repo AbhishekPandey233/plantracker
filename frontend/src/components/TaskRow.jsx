@@ -1,34 +1,39 @@
-// One colour per task type, used for both the label text and the left border.
+// One colour per task type: text for the label, border for the left edge.
+// Each has a light and dark variant so contrast holds in both modes.
 const TYPE_STYLES = {
-  learn: 'text-blue-600 border-blue-400',
-  practise: 'text-emerald-600 border-emerald-400',
-  project: 'text-purple-600 border-purple-400',
-  review: 'text-amber-600 border-amber-400',
+  learn: { text: 'text-blue-600 dark:text-blue-400', border: 'border-blue-400 dark:border-blue-500' },
+  practise: { text: 'text-emerald-600 dark:text-emerald-400', border: 'border-emerald-400 dark:border-emerald-500' },
+  project: { text: 'text-purple-600 dark:text-purple-400', border: 'border-purple-400 dark:border-purple-500' },
+  review: { text: 'text-amber-600 dark:text-amber-400', border: 'border-amber-400 dark:border-amber-500' },
 }
+const DEFAULT_STYLE = { text: 'text-slate-600 dark:text-slate-300', border: 'border-slate-300 dark:border-slate-600' }
 
 // A single task row: checkbox, type label, time, text, resources.
 // "done" and "onToggle" are passed down from App via DayCard (props).
-function TaskRow({ task, done, onToggle }) {
-  const style = TYPE_STYLES[task.type] ?? 'text-slate-600 border-slate-300'
+// "large" makes today's tasks bigger and easier to tap (Phase 5 Today view).
+function TaskRow({ task, done, onToggle, large = false }) {
+  const style = TYPE_STYLES[task.type] ?? DEFAULT_STYLE
 
   return (
     <label
-      className={`flex items-start gap-3 py-2 pl-3 border-l-4 ${style.split(' ')[1]} ${done ? 'opacity-50' : ''}`}
+      className={`flex items-start gap-3 ${large ? 'py-3' : 'py-2'} pl-3 border-l-4 ${style.border} ${done ? 'opacity-50' : ''}`}
     >
       <input
         type="checkbox"
         checked={done}
         // onChange fires when the checkbox is clicked; we tell App which task id changed.
         onChange={() => onToggle(task.id)}
-        className="mt-1 h-5 w-5 accent-indigo-600"
+        className={`mt-1 accent-teal-600 dark:accent-teal-400 ${large ? 'h-6 w-6' : 'h-5 w-5'}`}
       />
       <div className={done ? 'line-through' : ''}>
-        <span className={`text-xs font-semibold uppercase ${style.split(' ')[0]}`}>
+        <span className={`text-xs font-semibold uppercase ${style.text}`}>
           {task.type}
         </span>
-        {task.time && <span className="text-xs text-slate-400 ml-2">{task.time}</span>}
-        <p className="text-sm text-slate-700">{task.text}</p>
-        {task.resources && <p className="text-xs text-slate-400">{task.resources}</p>}
+        {task.time && <span className="text-xs text-slate-400 dark:text-slate-500 ml-2">{task.time}</span>}
+        <p className={large ? 'text-base text-slate-700 dark:text-slate-200' : 'text-sm text-slate-700 dark:text-slate-200'}>
+          {task.text}
+        </p>
+        {task.resources && <p className="text-xs text-slate-400 dark:text-slate-500">{task.resources}</p>}
       </div>
     </label>
   )
