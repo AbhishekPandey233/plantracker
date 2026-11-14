@@ -8,11 +8,13 @@ import { withTransition } from '../utils/transition'
 import Confetti from './Confetti'
 import DayCard from './DayCard'
 import HistoryView from './HistoryView'
+import Home from './Home'
 import ImportPanel from './ImportPanel'
 import Menu from './Menu'
 import MiniCalendar from './MiniCalendar'
 import MonthWizard from './MonthWizard'
 import MonthsView from './MonthsView'
+import Settings from './Settings'
 import Sidebar from './Sidebar'
 import TaskForm from './TaskForm'
 import Toast from './Toast'
@@ -25,7 +27,7 @@ function weekIndexFor(weeks, date) {
   return index === -1 ? 0 : index
 }
 
-const VIEWS = ['today', 'weeks', 'months', 'history'] // left to right, for the slide direction
+const VIEWS = ['home', 'today', 'weeks', 'months', 'history', 'settings'] // left to right, for the slide direction
 const COLLAPSED_KEY = 'planTracker:sidebarCollapsed'
 
 // The saved panel choice wins; with nothing saved, narrow windows start collapsed.
@@ -63,7 +65,7 @@ function Tracker({ plan, editPlan: editOnServer }) {
   const now = useNow()
   const { isDone, toggle, setMany, resetAll, undo, reload: reloadTicks, toast, closeToast, saveError } = useProgress()
   // useState: values React remembers between renders.
-  const [tab, setTab] = useState('today') // 'today', 'weeks', 'months' or 'history'
+  const [tab, setTab] = useState('home') // 'home', 'today', 'weeks', 'months' or 'history'
   const [viewDate, setViewDate] = useState(null) // the day the Today view shows: null = today
   const [collapsed, setCollapsed] = useState(loadCollapsed) // passing the function: it only runs on the first render
   const [weekIndex, setWeekIndex] = useState(null) // null = "the week that contains today"
@@ -88,7 +90,7 @@ function Tracker({ plan, editPlan: editOnServer }) {
   const todayTasks = days.find((d) => d.date === today)?.tasks ?? []
   const todayDone = todayTasks.filter((t) => isDone(t.id)).length
 
-  // Views sit left to right (Today, Weeks, Months, History): moving right slides forward, left slides back.
+  // Views sit left to right (Home, Today, Weeks, Months, History): moving right slides forward, left slides back.
   // Opening Today always shows today (not a day picked earlier).
   function changeTab(next) {
     if (next === tab && !(next === 'today' && viewDate)) return // clicking the open view shouldn't animate
@@ -175,14 +177,15 @@ function Tracker({ plan, editPlan: editOnServer }) {
     document.title = todayTasks.length ? `Plan Tracker (${todayDone}/${todayTasks.length} today)` : 'Plan Tracker'
   }, [todayDone, todayTasks.length])
 
-  // Keyboard shortcuts: ← / → week, T Today, W Weeks, M Months, H History, [ panel, N add task.
+  // Keyboard shortcuts: ← / → week, G Home, T Today, W Weeks, M Months, H History, [ panel, N add task.
   // No dependency list: it re-subscribes after every render, so it always sees the latest state.
   useEffect(() => {
     function onKey(e) {
       // Any open dialog (task form, import, wizard, edit/delete) pauses the shortcuts.
       if (e.ctrlKey || e.metaKey || e.altKey || isTyping(e.target) || document.querySelector('[aria-modal]')) return
       const key = e.key.toLowerCase()
-      if (key === 't') changeTab('today')
+      if (key === 'g') changeTab('home')
+      else if (key === 't') changeTab('today')
       else if (key === 'w') changeTab('weeks')
       else if (key === 'm') changeTab('months')
       else if (key === 'h') changeTab('history')
@@ -225,6 +228,8 @@ function Tracker({ plan, editPlan: editOnServer }) {
     return result
   }
 
+  const summary = planSummary(plan, today, isDone)
+
   // Shared with every component below through PlanContext (see PlanContext.js).
   const actions = { plan, editPlan, isDone, toggle: toggleAndCelebrate, setMany: setManyAndCelebrate, openTaskForm: setForm }
 
@@ -238,7 +243,7 @@ function Tracker({ plan, editPlan: editOnServer }) {
           collapsed={collapsed}
           onToggle={toggleSidebar}
           onNewMonth={() => setWizardOpen(true)}
-          summary={planSummary(plan, today, isDone)}
+          summary={summary}
           onMissedClick={() => goTo('today', { anchor: 'catch-up' })}
         >
           <MiniCalendar today={today} onPick={goToDate} />
@@ -247,7 +252,7 @@ function Tracker({ plan, editPlan: editOnServer }) {
       <main className="flex-1 min-w-0 py-8 px-4">
         <div className="max-w-2xl mx-auto">
           <div className="flex justify-end -mb-2">
-            <Menu onImport={() => setImporting(true)} onResetAll={resetAll} />
+            <Menu onImport={() => setImporting(true)} onSettings={() => changeTab('settings')} onResetAll={resetAll} />
           </div>
 
           {saveError && (
@@ -259,8 +264,22 @@ function Tracker({ plan, editPlan: editOnServer }) {
           <div style={{ viewTransitionName: 'page' }}>
             {/* key: when the key changes, React throws the old element away and mounts
                 a new one, so the fade-in animations replay on every view/week switch. */}
-            {tab === 'today' ? (
+            {tab === 'home' ? (
+              <Home
+                key="home"
+                now={now}
+                days={days}
+                summary={summary}
+                onStartToday={() => changeTab('today')}
+                onLookBack={() => changeTab('history')}
+                onAddMonth={() => setWizardOpen(true)}
+                onImport={() => setImporting(true)}
+                onOpenDay={openDay}
+              />
+            ) : tab === 'today' ? (
               <TodayView key={`today-${viewDate ?? today}`} days={days} now={now} date={viewDate ?? today} onBackToToday={() => changeTab('today')} onPickDate={openDay} />
+            ) : tab === 'settings' ? (
+              <Settings key="settings" today={today} />
             ) : tab === 'history' ? (
               <HistoryView key="history" today={today} onOpenDay={openDay} />
             ) : tab === 'months' ? (
@@ -304,7 +323,7 @@ function Tracker({ plan, editPlan: editOnServer }) {
           </div>
 
           <p className="text-center text-xs text-slate-400 mt-10">
-            Shortcuts: <kbd>T</kbd> Today · <kbd>W</kbd> Weeks · <kbd>M</kbd> Months · <kbd>H</kbd> History · <kbd>←</kbd> <kbd>→</kbd> week ·{' '}
+            Shortcuts: <kbd>G</kbd> Home · <kbd>T</kbd> Today · <kbd>W</kbd> Weeks · <kbd>M</kbd> Months · <kbd>H</kbd> History · <kbd>←</kbd> <kbd>→</kbd> week ·{' '}
             <kbd>N</kbd> add task · <kbd>[</kbd> panel
           </p>
         </div>

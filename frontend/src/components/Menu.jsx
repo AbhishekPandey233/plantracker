@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 
 const item = 'block w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors'
 
-// The small "⋯" menu in the top-right corner: Import from Claude, Reset all progress.
+// The small "⋯" menu in the top-right corner: Import from Claude, Settings (export/import backup), Reset all progress.
 // Reset asks "Are you sure?" inside the menu before doing anything.
-function Menu({ onImport, onResetAll }) {
+function Menu({ onImport, onSettings, onResetAll }) {
   const [open, setOpen] = useState(false)
   const [confirmReset, setConfirmReset] = useState(false)
   const ref = useRef(null) // the menu's outer element, to detect clicks outside it
@@ -46,6 +46,15 @@ function Menu({ onImport, onResetAll }) {
             }}
           >
             Import from Claude
+          </button>
+          <button
+            className={item}
+            onClick={() => {
+              setOpen(false)
+              onSettings()
+            }}
+          >
+            Settings (export, backup)
           </button>
           {!confirmReset ? (
             <button className={`${item} text-red-600`} onClick={() => setConfirmReset(true)}>

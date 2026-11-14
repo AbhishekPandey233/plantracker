@@ -27,3 +27,6 @@ skills-lock.json
 # Local data API leftovers: backups of the previous version and half-finished writes
 frontend/data/*.backup.json
 frontend/data/*.tmp
+
+# Backend: database dumps (backup.ps1)
+backend/backups/

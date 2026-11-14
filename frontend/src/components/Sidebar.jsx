@@ -3,6 +3,7 @@ import ProgressSummary from './ProgressSummary'
 
 // Small line icons (24x24 SVG paths), so no icon library is needed.
 const ICONS = {
+  home: 'M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10',
   today: 'M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z',
   weeks: 'M4 6h16M4 12h16M4 18h16',
   months: 'M4 5h16v15H4zM4 10h16M9 3v4M15 3v4',
@@ -21,6 +22,7 @@ function Icon({ name }) {
 }
 
 const NAV = [
+  { view: 'home', label: 'Home', key: 'G' },
   { view: 'today', label: 'Today', key: 'T' },
   { view: 'weeks', label: 'Weeks', key: 'W' },
   { view: 'months', label: 'Months', key: 'M' },

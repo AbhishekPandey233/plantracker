@@ -2,7 +2,7 @@
 // Run with: npm run test:helpers
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { bestStreak, calendarRows, computeStreak, dayStatus, daysBetween, flattenDays, getTodayContext, deleteMessage, filterHistory, firstUnfinishedDay, monthBounds, newlyCompleted, tasksByType, planSummary, shortDate, todayString } from '../src/utils/planHelpers.js'
+import { bestStreak, calendarRows, journey, nextUnfinishedTask, computeStreak, dayStatus, daysBetween, flattenDays, getTodayContext, deleteMessage, filterHistory, firstUnfinishedDay, monthBounds, newlyCompleted, tasksByType, planSummary, shortDate, todayString } from '../src/utils/planHelpers.js'
 import { validatePlan, validateProgress } from '../src/utils/validatePlan.js'
 import { buildTimeline, routineWeekStats, formatClock, kathmanduParts, nowAndNext, parseTimeRange, routineTickIds, templateFor } from '../src/utils/timeHelpers.js'
 import { tickUrl } from '../src/utils/api.js'
@@ -291,6 +291,30 @@ assert.equal(deleteMessage('This week', { tasks: 1, ticks: 2 }), 'This week has 
   const has = (id) => ticked.has(id)
   assert.equal(firstUnfinishedDay([d('2026-01-03', 'c'), d('2026-01-01', 'a'), d('2026-01-02'), d('2026-01-04', 'b')], has), '2026-01-03', 'skips done and empty days')
   assert.equal(firstUnfinishedDay([d('2026-01-01', 'a')], has), null, 'everything done')
+}
+
+// --- Home page (Phase 9) ---
+{
+  const p = {
+    meta: { start: '2026-01-01', targetEnd: '2026-01-11', targetMonths: 3 },
+    months: [{ id: 'm2', title: 'B', start: '2026-01-06', end: '2026-01-10', weeks: [] }, { id: 'm1', title: 'A', start: '2026-01-01', end: '2026-01-05', weeks: [] }],
+  }
+  const j = journey(p, '2026-01-07')
+  assert.deepEqual(j.stops.map((s) => s.id ?? '-'), ['m1', 'm2', '-'], 'sorted by start, unplanned stops fill up to targetMonths')
+  assert.deepEqual(j.stops.map((s) => [!!s.passed, !!s.current]), [[true, false], [false, true], [false, false]])
+  assert.equal(j.position, 0.6, '6 of 10 days in')
+  assert.equal(journey(p, '2025-01-01').position, 0, 'clamped before the start')
+  assert.equal(journey({ months: [] }, '2026-01-01').stops.length, 0, 'empty plan')
+
+  const d = (date, ...ids) => ({ date, tasks: ids.map((id) => ({ id })) })
+  const ticked = new Set(['a'])
+  const has = (id) => ticked.has(id)
+  const list = [d('2026-01-03', 'c'), d('2026-01-01', 'a', 'b'), d('2026-01-05', 'e')]
+  assert.equal(nextUnfinishedTask(list, '2026-01-04', has).task.id, 'b', 'oldest unticked up to today first')
+  ticked.add('b').add('c')
+  assert.equal(nextUnfinishedTask(list, '2026-01-04', has).task.id, 'e', 'then the next upcoming one')
+  ticked.add('e')
+  assert.equal(nextUnfinishedTask(list, '2026-01-04', has), null)
 }
 
 console.log('planHelpers OK: all checks passed')

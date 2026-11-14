@@ -120,3 +120,30 @@
   0%, 80% { opacity: 1; }
   100% { opacity: 0; }
 }
+
+/* Home page (Home.jsx). Still transform/opacity only. */
+/* A line "draws" by growing from scaleX(0). Only "from" is given, so it ends at the
+   element's own inline transform (e.g. scaleX(0.4) for 40% of the journey). */
+@keyframes draw-x {
+  from { transform: scaleX(0); }
+}
+/* The progress ring turns into place (it's already filled to its value). */
+@keyframes ring-in {
+  from { transform: rotate(-120deg) scale(0.7); }
+}
+/* The streak flame: one smooth breath in and out, repeated (alternate = back and forth,
+   so there's one segment and nothing stalls). */
+@keyframes flame {
+  to { transform: scale(1.15) translateY(-1px); }
+}
+.animate-draw-x {
+  animation: draw-x 1.1s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transform-origin: left;
+}
+.animate-ring-in {
+  animation: ring-in 1s var(--ease-spring-rise) both, fade-in 0.4s ease-out both;
+}
+.animate-flame {
+  display: inline-block;
+  animation: flame 0.9s ease-in-out infinite alternate;
+}

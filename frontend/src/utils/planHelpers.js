@@ -186,3 +186,28 @@ export function filterHistory(days, filter) {
 export function firstUnfinishedDay(days, isDone) {
   return planDays(days).find((d) => !isComplete(d, isDone))?.date ?? null
 }
+
+// Home page "6-month journey": one stop per target month (planned or not) and where
+// today sits on the line (0 = plan start, 1 = target end).
+export function journey(plan, today) {
+  const meta = plan.meta ?? {}
+  const months = [...plan.months].sort((a, b) => (a.start < b.start ? -1 : 1))
+  const count = Math.max(meta.targetMonths ?? 0, months.length)
+  const stops = Array.from({ length: count }, (_, i) => {
+    const m = months[i]
+    if (!m) return { planned: false }
+    return { planned: true, id: m.id, title: m.title, current: m.start <= today && today <= m.end, passed: m.end < today }
+  })
+  const start = meta.start ?? months[0]?.start
+  const end = meta.targetEnd ?? months.at(-1)?.end
+  const span = start && end ? daysBetween(start, end) : 0
+  const position = span > 0 ? Math.min(1, Math.max(0, daysBetween(start, today) / span)) : 0
+  return { stops, position }
+}
+
+// Home page "Continue where you left off": the oldest unticked task up to today,
+// or the first unticked one after today. { task, date } or null.
+export function nextUnfinishedTask(days, today, isDone) {
+  const open = planDays(days).flatMap((d) => d.tasks.filter((t) => !isDone(t.id)).map((task) => ({ task, date: d.date })))
+  return open.find((x) => x.date <= today) ?? open.find((x) => x.date > today) ?? null
+}

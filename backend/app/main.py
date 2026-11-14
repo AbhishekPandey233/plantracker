@@ -11,7 +11,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from app.core.config import settings
 from app.core.logging import logger, setup_logging
 from app.core.security import SECURITY_HEADERS, SecurityMiddleware
-from app.routers import health, journal, months, plan, reschedule, tasks, ticks
+from app.routers import backup, health, journal, months, plan, reschedule, tasks, ticks
 
 setup_logging(settings.log_file)
 
@@ -72,7 +72,7 @@ async def integrity_error(request: Request, exc: IntegrityError):
 
 
 # Every router here is protected by SecurityMiddleware (API key etc.) automatically.
-for router_module in (health, plan, ticks, tasks, months, journal, reschedule):
+for router_module in (health, plan, ticks, tasks, months, journal, reschedule, backup):
     app.include_router(router_module.router)
 
 
