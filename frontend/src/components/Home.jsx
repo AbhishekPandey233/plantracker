@@ -74,6 +74,9 @@ function Home({ now, days, summary, onStartToday, onLookBack, onAddMonth, onImpo
     <div className="space-y-4">
       {/* 1. Hero */}
       <section className={`${card} text-center py-8`} style={delay(0)}>
+        {/* Files in frontend/public are served at "/", so no import is needed.
+            mix-blend-multiply makes the icon's white background blend into the card. */}
+        <img src="/app_icon.png" alt="Plan Tracker" className="mx-auto mb-3 h-16 w-auto mix-blend-multiply" />
         <p className="text-sm font-medium text-slate-500 tabular-nums">{formatClock(now)}</p>
         <h1 className="text-3xl font-bold text-slate-800 mt-1">{greeting(kathmanduParts(now).minutes)}, Abhishek</h1>
         {todayDay?.focus && <p className="text-slate-500 mt-1">Today: {todayDay.focus}</p>}
