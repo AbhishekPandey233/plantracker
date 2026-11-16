@@ -5,6 +5,12 @@ DAY = "2031-04-07"
 
 def test_export_restore_round_trip(client):
     client.put(f"/api/journal/{DAY}", json={"learned": "Backups", "mood": 5})
+    # Restore never deletes, so the first task needs a saved tick before the export
+    # (otherwise the tick added below has nothing to be restored to).
+    plan = client.get("/api/plan").json()
+    first = next((t for m in plan["months"] for w in m["weeks"] for d in w["days"] for t in d["tasks"]), None)
+    if first:
+        client.put(f"/api/ticks/tasks/{first['id']}", json={"done": True})
     backup = client.get("/api/export").json()
     assert backup["version"] == 1 and backup["plan"]["months"] is not None
     assert any(e["date"] == DAY for e in backup["journal"])
