@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { usePlanActions } from '../PlanContext'
 import { TASK_TYPES } from '../utils/validatePlan'
+import DatePicker from './DatePicker'
 import Modal from './Modal'
 
 const input = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500'
@@ -46,7 +47,7 @@ function TaskForm({ form, onClose }) {
         <div className="grid grid-cols-2 gap-3">
           <label>
             <span className={fieldLabel}>Date</span>
-            <input type="date" required value={fields.date} onChange={set('date')} className={input} />
+            <DatePicker label="Date" value={fields.date} onChange={(date) => setFields({ ...fields, date })} className={input} />
           </label>
           <label>
             <span className={fieldLabel}>Type</span>

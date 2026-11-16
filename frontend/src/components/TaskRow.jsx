@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { usePlanActions } from '../PlanContext'
 import { isCustomTask } from '../utils/timeHelpers'
+import DatePicker from './DatePicker'
 
 // One colour per task type: text for the label, border for the left edge.
 const TYPE_STYLES = {
@@ -82,7 +83,7 @@ function TaskRow({ task, date, large = false }) {
             }}
           >
             <span className="text-xs text-slate-500">Move to</span>
-            <input type="date" required value={moveDate} onChange={(e) => setMoveDate(e.target.value)} className="text-xs border border-slate-300 rounded px-2 py-1" />
+            <DatePicker label="Move to" value={moveDate} onChange={setMoveDate} className="text-xs bg-white border border-slate-300 rounded px-2 py-1" />
             <button type="submit" className="text-xs font-semibold text-white bg-teal-600 rounded px-2 py-1 active:scale-95 transition">Move</button>
             <button type="button" className={linkButton} onClick={() => setPanel(null)}>Cancel</button>
           </form>

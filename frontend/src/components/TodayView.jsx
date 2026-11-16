@@ -1,6 +1,7 @@
 import { usePlanActions } from '../PlanContext'
 import { computeStreak, getTodayContext, shortDate, todayString } from '../utils/planHelpers'
 import { buildTimeline, kathmanduParts, routineTickIds } from '../utils/timeHelpers'
+import DatePicker from './DatePicker'
 import JournalCard from './JournalCard'
 import ProgressBar from './ProgressBar'
 import TaskRow from './TaskRow'
@@ -34,13 +35,14 @@ function TodayView({ days, now, date, onBackToToday, onPickDate }) {
     <div className="animate-fade-up">
       {/* View any day: picking a date shows that day here, all tickable, like today. */}
       <div className="flex justify-end -mt-2 mb-1">
-        <label className="flex items-center gap-2 text-xs text-slate-500">
+        <label className="flex items-center gap-2 text-sm font-medium text-slate-500">
           View day
-          <input
-            type="date"
+          <DatePicker
+            label="View day"
             value={date}
-            onChange={(e) => e.target.value && onPickDate(e.target.value)}
-            className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500"
+            onChange={onPickDate}
+            align="right"
+            className="min-w-44 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
           />
         </label>
       </div>

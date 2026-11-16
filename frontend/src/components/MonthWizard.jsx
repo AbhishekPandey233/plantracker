@@ -13,6 +13,7 @@ import {
   wizardWeeks,
 } from '../utils/monthWizard'
 import { isValidDate } from '../utils/validatePlan'
+import DatePicker from './DatePicker'
 import Modal from './Modal'
 import WizardDays from './WizardDays'
 
@@ -146,8 +147,8 @@ function MonthWizard({ today, onClose, onSaved }) {
             </div>
             <div className="flex gap-3">
               <div className="flex-1">
-                <label className={label} htmlFor="wiz-start">Start date</label>
-                <input id="wiz-start" type="date" className={input} value={draft.start} onChange={(e) => edit((d) => (d.start = e.target.value))} />
+                <span className={label}>Start date</span>
+                <DatePicker label="Start date" className={input} value={draft.start} onChange={(date) => edit((d) => (d.start = date))} />
               </div>
               <div className="w-32">
                 <label className={label} htmlFor="wiz-weeks">Weeks</label>

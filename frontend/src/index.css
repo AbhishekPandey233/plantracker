@@ -147,3 +147,11 @@
   display: inline-block;
   animation: flame 0.9s ease-in-out infinite alternate;
 }
+
+/* An open DatePicker: every box around it is un-faded (past timeline blocks use opacity-60,
+   which would fade the calendar too) and lifted above the cards that come after it.
+   z-index only works on positioned or flex/grid children, which covers the timeline's <li>. */
+:has([data-picker-open]) {
+  opacity: 1 !important;
+  z-index: 30;
+}

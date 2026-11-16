@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { usePlanActions } from '../PlanContext'
 import { api } from '../utils/api'
 import { addDays, daysBetween, firstUnfinishedDay, flattenDays, shortDate } from '../utils/planHelpers'
+import DatePicker from './DatePicker'
 import Modal from './Modal'
 
 const input = 'w-full rounded-lg border border-slate-200 px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500'
@@ -64,11 +65,11 @@ function RescheduleDialog({ today, onClose }) {
           <div className="flex flex-wrap gap-3">
             <label className="flex-1 min-w-40">
               <span className="block text-sm font-medium text-slate-600 mb-1">From date (usually the first unfinished day)</span>
-              <input type="date" className={input} value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+              <DatePicker label="From date" className={input} value={fromDate} onChange={setFromDate} />
             </label>
             <label className="flex-1 min-w-40">
               <span className="block text-sm font-medium text-slate-600 mb-1">New start date</span>
-              <input type="date" className={input} value={newStart} onChange={(e) => setNewStart(e.target.value)} />
+              <DatePicker label="New start date" className={input} value={newStart} onChange={setNewStart} align="right" />
             </label>
           </div>
           {shiftDays > 0 && (
