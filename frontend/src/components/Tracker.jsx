@@ -250,8 +250,7 @@ function Tracker({ plan, editPlan: editOnServer }) {
         </Sidebar>
 
       <main className="flex-1 min-w-0 py-8 px-4">
-        {/* Home is a dashboard, so it gets a wider column; the other pages keep a reading width. */}
-        <div className={`${tab === 'home' ? 'max-w-4xl' : 'max-w-2xl'} mx-auto`}>
+        <div className="max-w-4xl mx-auto">
           <div className="flex justify-end mb-3">
             <Menu onImport={() => setImporting(true)} onSettings={() => changeTab('settings')} onResetAll={resetAll} />
           </div>
