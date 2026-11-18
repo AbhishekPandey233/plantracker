@@ -17,4 +17,4 @@ Start-Process powershell -WorkingDirectory $backend -ArgumentList '-NoExit', '-C
 Start-Process powershell -WorkingDirectory $frontend -ArgumentList '-NoExit', '-Command',
     '$Host.UI.RawUI.WindowTitle = ''Plan Tracker frontend''; npm run dev'
 
-Write-Host 'Started. Open http://localhost:5173 once both windows are ready.' -ForegroundColor Green
+Write-Host 'Started. The app opens in your browser when the frontend is ready.' -ForegroundColor Green
