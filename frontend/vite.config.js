@@ -24,6 +24,8 @@ export default defineConfig(({ command, mode }) => {
       // Don't set server.host: the dev server must stay on this laptop only.
       port: 5173,
       strictPort: true,
+      // open: Vite opens the app in your default browser once the dev server is ready.
+      open: true,
       proxy: apiProxy(env.API_KEY),
     },
   }
